@@ -91,6 +91,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":wavetop"))
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.activity:activity-ktx:1.8.2")
     implementation("androidx.appcompat:appcompat:1.6.1")

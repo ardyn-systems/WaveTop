@@ -4,6 +4,7 @@
 
 # Keep game classes
 -keep class com.astroloop.game.** { *; }
+-keep class com.ardyn.wavetop.survey.** { *; }
 
 # Keep Kotlin metadata
 -keep class kotlin.Metadata { *; }

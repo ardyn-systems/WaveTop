@@ -13,12 +13,13 @@ Upstream license files are kept as shipped (`LICENSE`, `LICENSE.OpenSSL`, and `A
 
 ## astro-loop
 
-Imported from upstream as a **git subtree** (squash). Source is unmodified. Pinned to the latest published GitHub release.
+Imported from upstream as a **git subtree** (squash), then used as the WaveTop host app.
 
 - Path: [`astro-loop/`](astro-loop/)
 - Upstream: https://github.com/PubDeer/astro-loop
 - Release tag: `1.3` (https://github.com/PubDeer/astro-loop/releases/tag/1.3)
 - Imported commit: `275b91ae8832dbf9a884e2ab5249b3df25ec4fc1`
-- Method: `git subtree add --prefix=third_party/astro-loop 275b91ae8832dbf9a884e2ab5249b3df25ec4fc1 --squash`
+- WaveTop survey module (Compose, public Android scan APIs): [`astro-loop/wavetop/`](astro-loop/wavetop/)
+- Entry: 10s continuous press on the Astro Loop logo/splash
 
 Upstream license files are kept as shipped (`LICENSE`, `THIRD_PARTY_NOTICES.md`).

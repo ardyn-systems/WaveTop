@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "AstroLoop"
 include(":app")
+include(":wavetop")

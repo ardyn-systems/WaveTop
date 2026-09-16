@@ -1,5 +1,6 @@
 package com.astroloop.game
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.view.WindowInsets
@@ -7,6 +8,7 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import com.ardyn.wavetop.survey.WaveTopSurveyActivity
 import com.astroloop.game.core.BrickScreenView
 import com.astroloop.game.core.GameSurfaceView
 import com.astroloop.game.core.SoundManager
@@ -14,11 +16,13 @@ import com.astroloop.game.core.StoryStateManager
 import com.astroloop.game.data.PersistenceManager
 import com.astroloop.game.hangar.HangarSurfaceView
 import com.astroloop.game.render.FontManager
+import com.astroloop.game.splash.SplashLogoView
 
 class MainActivity : ComponentActivity() {
 
     private var hangarView: HangarSurfaceView? = null
     private var gameView: GameSurfaceView? = null
+    private var splashView: SplashLogoView? = null
     private var currentView: View? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,13 +64,33 @@ class MainActivity : ComponentActivity() {
         persistence.healDesertGoodEnding()
         SoundManager.activeSet = StoryStateManager.stageMusicSet(persistence)
 
-        // Route to the appropriate screen based on persistence state
+        // Logo/splash first: a continuous 10s press opens WaveTop in-process.
+        showSplash()
+
+        // Fullscreen immersive mode (must be after setContentView)
+        setupFullscreen()
+    }
+
+    private fun showSplash() {
+        val splash = SplashLogoView(this)
+        splash.onContinueToGame = {
+            runOnUiThread { enterGame() }
+        }
+        splash.onOpenWaveTop = {
+            startActivity(Intent(this, WaveTopSurveyActivity::class.java))
+        }
+        splashView = splash
+        setContentView(splash)
+        currentView = splash
+    }
+
+    private fun enterGame() {
+        splashView = null
+        val persistence = PersistenceManager(this)
         when {
             persistence.isCrystalBroken() -> showBrickScreen()
             else -> showHangar()
         }
-
-        // Fullscreen immersive mode (must be after setContentView)
         setupFullscreen()
     }
 
@@ -230,10 +254,10 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         SoundManager.resume()
-        if (currentView == hangarView) {
-            hangarView?.resume()
-        } else {
-            gameView?.resume()
+        when (currentView) {
+            is SplashLogoView -> splashView?.onHostResumed()
+            hangarView -> hangarView?.resume()
+            else -> gameView?.resume()
         }
         setupFullscreen()
     }
