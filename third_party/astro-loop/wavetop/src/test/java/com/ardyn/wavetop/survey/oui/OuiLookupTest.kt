@@ -19,7 +19,7 @@ class OuiLookupTest {
 
     @Test
     fun `unknown when no match`() {
-        assertEquals("Unknown", lookup.manufacturerFor("DE:AD:BE:EF:00:01"))
+        assertEquals("Unknown", lookup.manufacturerFor("00:11:22:33:44:55"))
     }
 
     @Test

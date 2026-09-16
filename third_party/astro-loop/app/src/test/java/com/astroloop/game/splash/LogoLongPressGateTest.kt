@@ -32,4 +32,14 @@ class LogoLongPressGateTest {
         assertFalse(gate.shouldOpenWaveTop(14_999L))
         assertTrue(gate.shouldOpenWaveTop(15_000L))
     }
+
+    @Test
+    fun `reset allows a later hold after WaveTop was opened`() {
+        val gate = LogoLongPressGate(10_000L)
+        gate.press(0L)
+        assertTrue(gate.shouldOpenWaveTop(10_000L))
+        gate.reset()
+        gate.press(20_000L)
+        assertTrue(gate.shouldOpenWaveTop(30_000L))
+    }
 }

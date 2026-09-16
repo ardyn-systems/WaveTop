@@ -20,6 +20,11 @@ class LogoLongPressGate(private val holdDurationMs: Long = 10_000L) {
 
     fun hasOpened(): Boolean = opened
 
+    fun reset() {
+        pressedAtMs = null
+        opened = false
+    }
+
     fun remainingMs(nowMs: Long): Long {
         val start = pressedAtMs ?: return holdDurationMs
         return (holdDurationMs - (nowMs - start)).coerceAtLeast(0L)

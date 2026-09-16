@@ -60,7 +60,9 @@ class SplashLogoView @JvmOverloads constructor(
     }
 
     fun onHostResumed() {
-        if (finished || gate.isHolding() || gate.hasOpened()) return
+        handler.removeCallbacksAndMessages(null)
+        gate.reset()
+        finished = false
         scheduleIdle()
     }
 
