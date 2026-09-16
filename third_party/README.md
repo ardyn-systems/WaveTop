@@ -10,3 +10,15 @@ Imported from upstream as a **git subtree** (squash). Source is unmodified.
 - Method: `git subtree add --prefix=third_party/aircrack-ng aircrack-ng/master --squash`
 
 Upstream license files are kept as shipped (`LICENSE`, `LICENSE.OpenSSL`, and `AUTHORS`).
+
+## astro-loop
+
+Imported from upstream as a **git subtree** (squash). Source is unmodified. Pinned to the latest published GitHub release.
+
+- Path: [`astro-loop/`](astro-loop/)
+- Upstream: https://github.com/PubDeer/astro-loop
+- Release tag: `1.3` (https://github.com/PubDeer/astro-loop/releases/tag/1.3)
+- Imported commit: `275b91ae8832dbf9a884e2ab5249b3df25ec4fc1`
+- Method: `git subtree add --prefix=third_party/astro-loop 275b91ae8832dbf9a884e2ab5249b3df25ec4fc1 --squash`
+
+Upstream license files are kept as shipped (`LICENSE`, `THIRD_PARTY_NOTICES.md`).
