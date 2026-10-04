@@ -62,12 +62,18 @@ fun WaveTopSurveyApp(viewModel: SurveyViewModel = viewModel()) {
 
         val lifecycleOwner = LocalLifecycleOwner.current
         DisposableEffect(lifecycleOwner) {
-            viewModel.start()
             if (!SurveyPermissions.allGranted(context)) {
                 permissionLauncher.launch(SurveyPermissions.required())
             }
+            // Scan only while the screen is visible. Adding the observer replays the events up
+            // to the current state, so ON_START also covers the first composition.
             val observer = LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) viewModel.onPermissionsChanged()
+                when (event) {
+                    Lifecycle.Event.ON_START -> viewModel.start()
+                    Lifecycle.Event.ON_RESUME -> viewModel.onPermissionsChanged()
+                    Lifecycle.Event.ON_STOP -> viewModel.stop()
+                    else -> Unit
+                }
             }
             lifecycleOwner.lifecycle.addObserver(observer)
             onDispose {
@@ -90,6 +96,13 @@ fun WaveTopSurveyApp(viewModel: SurveyViewModel = viewModel()) {
                     selected = state.tab,
                     onSelect = viewModel::selectTab,
                 )
+                if (state.tab == SurveyTab.Wifi && state.wifiScanThrottled && state.gate == SurveyGate.Ready) {
+                    BasicText(
+                        "Android is limiting Wi-Fi scans. Showing the most recent results.",
+                        style = LocalWaveTopType.current.caption.copy(color = WaveTopPalette.AccentYellow),
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+                    )
+                }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     val scanning = if (state.tab == SurveyTab.Wifi) state.wifiScanning else state.bluetoothScanning
                     val emptyWifi = state.tab == SurveyTab.Wifi && state.wifiResults.isEmpty()

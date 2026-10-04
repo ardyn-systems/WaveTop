@@ -18,11 +18,15 @@ class WifiSurveyScanner(
     private val oui: OuiLookup,
 ) {
     private val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-    private var listener: (() -> Unit)? = null
+    private var onResults: (() -> Unit)? = null
+    private var onRadioChanged: (() -> Unit)? = null
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context?, intent: Intent?) {
-            listener?.invoke()
+            when (intent?.action) {
+                WifiManager.SCAN_RESULTS_AVAILABLE_ACTION -> onResults?.invoke()
+                WifiManager.WIFI_STATE_CHANGED_ACTION -> onRadioChanged?.invoke()
+            }
         }
     }
 
@@ -30,21 +34,31 @@ class WifiSurveyScanner(
 
     fun radioOn(): Boolean = wifi?.isWifiEnabled == true
 
-    fun register(onChange: () -> Unit) {
-        listener = onChange
+    /**
+     * [onResults] fires when a scan finishes (ours, or one another app or the system ran);
+     * [onRadioChanged] when Wi-Fi is switched on or off.
+     */
+    fun register(onResults: () -> Unit, onRadioChanged: () -> Unit) {
+        this.onResults = onResults
+        this.onRadioChanged = onRadioChanged
         val filter = IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
         filter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
         registerExported(context, receiver, filter)
     }
 
     fun unregister() {
-        listener = null
+        onResults = null
+        onRadioChanged = null
         try {
             context.unregisterReceiver(receiver)
         } catch (_: IllegalArgumentException) {
         }
     }
 
+    /**
+     * Asks the platform for a fresh scan. False means it was refused — on Android 9+ a
+     * foreground app gets 4 scans per 2 minutes — and no results broadcast will follow.
+     */
     @Suppress("DEPRECATION")
     fun requestScan(): Boolean {
         val mgr = wifi ?: return false

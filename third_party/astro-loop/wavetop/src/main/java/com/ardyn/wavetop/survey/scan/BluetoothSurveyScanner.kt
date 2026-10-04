@@ -12,10 +12,18 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import com.ardyn.wavetop.survey.model.BluetoothDeviceRecord
 import com.ardyn.wavetop.survey.oui.OuiLookup
-import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * One scan is a bounded window: LE scan + classic discovery for [SCAN_WINDOW_MS], then both
+ * stop and [onChange] fires with [isScanning] false. Advertisements arrive many times a second
+ * per device, so result changes are coalesced and published at most every [PUBLISH_INTERVAL_MS].
+ *
+ * All callbacks (receiver, LE scan, timers) run on the main thread.
+ */
 class BluetoothSurveyScanner(
     private val context: Context,
     private val oui: OuiLookup,
@@ -23,9 +31,20 @@ class BluetoothSurveyScanner(
     private val adapter: BluetoothAdapter? =
         (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
 
-    private val devices = ConcurrentHashMap<String, BluetoothDeviceRecord>()
+    private val devices = HashMap<String, BluetoothDeviceRecord>()
+    private val handler = Handler(Looper.getMainLooper())
     private var listener: (() -> Unit)? = null
     private var scanning = false
+    private var publishPending = false
+
+    private val publish = Runnable {
+        publishPending = false
+        listener?.invoke()
+    }
+    private val endWindow = Runnable {
+        stop()
+        listener?.invoke()
+    }
 
     private val classicReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context?, intent: Intent?) {
@@ -67,8 +86,10 @@ class BluetoothSurveyScanner(
 
     fun radioOn(): Boolean = adapter?.isEnabled == true
 
+    fun isScanning(): Boolean = scanning
+
     fun snapshot(): List<BluetoothDeviceRecord> =
-        devices.values.sortedWith(compareByDescending<BluetoothDeviceRecord> { it.rssiDbm ?: Int.MIN_VALUE })
+        devices.values.sortedByDescending { it.rssiDbm ?: Int.MIN_VALUE }
 
     fun register(onChange: () -> Unit) {
         listener = onChange
@@ -78,16 +99,19 @@ class BluetoothSurveyScanner(
     fun unregister() {
         stop()
         listener = null
+        handler.removeCallbacks(publish)
+        publishPending = false
         try {
             context.unregisterReceiver(classicReceiver)
         } catch (_: IllegalArgumentException) {
         }
     }
 
+    /** Starts one scan window. Returns false if the radio is off or a window is already open. */
     @SuppressLint("MissingPermission")
-    fun start() {
-        val bt = adapter ?: return
-        if (!bt.isEnabled || scanning) return
+    fun start(): Boolean {
+        val bt = adapter ?: return false
+        if (!bt.isEnabled || scanning) return false
         scanning = true
         try {
             bt.bluetoothLeScanner?.startScan(
@@ -103,10 +127,14 @@ class BluetoothSurveyScanner(
             bt.startDiscovery()
         } catch (_: SecurityException) {
         }
+        handler.postDelayed(endWindow, SCAN_WINDOW_MS)
+        return true
     }
 
     @SuppressLint("MissingPermission")
     fun stop() {
+        handler.removeCallbacks(endWindow)
+        if (!scanning) return
         scanning = false
         val bt = adapter ?: return
         try {
@@ -130,28 +158,39 @@ class BluetoothSurveyScanner(
     ) {
         val address = device.address ?: return
         val existing = devices[address]
-        val name = advertisedName
+        // device.name is a binder call; only ask when nothing better is known yet.
+        val name = advertisedName?.takeIf { it.isNotBlank() }
+            ?: existing?.name?.takeIf { it.isNotBlank() }
             ?: try {
                 device.name
             } catch (_: SecurityException) {
                 null
             }
-            ?: existing?.name.orEmpty()
+            ?: ""
         val mergedKind = when {
             existing == null -> kind
             existing.kind == kind -> kind
             else -> "Classic + BLE"
         }
         devices[address] = BluetoothDeviceRecord(
-            name = name.ifBlank { existing?.name.orEmpty() },
+            name = name,
             address = address,
             rssiDbm = rssi ?: existing?.rssiDbm,
             phy = phy ?: existing?.phy,
             kind = mergedKind,
             encryption = "Not advertised",
-            manufacturer = oui.manufacturerFor(address),
+            manufacturer = existing?.manufacturer ?: oui.manufacturerFor(address),
             lastSeenEpochMs = System.currentTimeMillis(),
         )
-        listener?.invoke()
+        if (!publishPending) {
+            publishPending = true
+            handler.postDelayed(publish, PUBLISH_INTERVAL_MS)
+        }
+    }
+
+    companion object {
+        /** About one classic inquiry cycle; also caps how long LOW_LATENCY LE scanning runs. */
+        const val SCAN_WINDOW_MS = 12_000L
+        const val PUBLISH_INTERVAL_MS = 500L
     }
 }

@@ -31,6 +31,7 @@ class SplashLogoView @JvmOverloads constructor(
     private val gate = LogoLongPressGate(HOLD_MS)
     private val handler = Handler(Looper.getMainLooper())
     private var finished = false
+    private var hostPaused = false
 
     private val logo: Drawable? = ContextCompat.getDrawable(context, R.drawable.ic_launcher_foreground)
 
@@ -63,7 +64,19 @@ class SplashLogoView @JvmOverloads constructor(
         handler.removeCallbacksAndMessages(null)
         gate.reset()
         finished = false
+        hostPaused = false
         scheduleIdle()
+    }
+
+    /**
+     * Freeze the splash while the host is in the background. Without this the idle timer
+     * still fires and enters the game (render thread + hangar music) behind the home screen,
+     * and so does the ACTION_CANCEL that follows a hold interrupted by leaving the app.
+     */
+    fun onHostPaused() {
+        hostPaused = true
+        handler.removeCallbacksAndMessages(null)
+        gate.release()
     }
 
     override fun onDetachedFromWindow() {
@@ -131,7 +144,7 @@ class SplashLogoView @JvmOverloads constructor(
     }
 
     private fun finishToGame() {
-        if (finished || gate.hasOpened()) return
+        if (finished || hostPaused || gate.hasOpened()) return
         finished = true
         handler.removeCallbacksAndMessages(null)
         onContinueToGame?.invoke()

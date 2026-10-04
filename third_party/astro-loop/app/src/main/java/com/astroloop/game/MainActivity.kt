@@ -241,6 +241,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        if (currentView is SplashLogoView) splashView?.onHostPaused()
         hangarView?.pause()
         gameView?.pause()
         SoundManager.pause()   // catch-all for phases not handled inside gameView.pause()
