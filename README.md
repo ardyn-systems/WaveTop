@@ -75,8 +75,11 @@ version over a newer one, so rolling back means uninstalling first — back up y
 In NetSeer: **Settings → Integrations → Pair a device** shows a six-digit code. In WaveTop:
 **Settings → NetSeer**, choose how to reach it, type the code, **Pair**.
 
-- **USB cable** — phone plugged into the computer running NetSeer, USB debugging on, then on the computer:
-  `adb reverse tcp:47331 tcp:47331`. NetSeer stays private to that computer.
+- **USB cable** — plug the phone into the computer running NetSeer with USB debugging on and allow the
+  computer when asked. NetSeer links it by itself (**Settings → Integrations → Over USB** lists linked
+  phones) — nothing to type. Older NetSeer versions without that section need, in PowerShell, each time
+  you plug in: `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:47331 tcp:<NetSeer's port>`
+  (add `-s <serial>` after `adb.exe` if more than one device is connected). NetSeer stays private to that computer.
 - **Wi-Fi / network** — turn on **Allow devices on my network** in NetSeer's Integrations and type the
   address it shows.
 

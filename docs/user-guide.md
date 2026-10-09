@@ -118,8 +118,20 @@ The buttons at the top **send it to NetSeer**, **share** it, or **delete** it. S
 Pair once (**Settings → NetSeer**):
 
 1. **How to reach NetSeer**
-   - **USB cable** — plug the phone into the computer running NetSeer (USB debugging on) and run
-     `adb reverse tcp:47331 tcp:47331` on the computer once. NetSeer stays private to that computer.
+   - **USB cable** — plug the phone into the computer running NetSeer with USB debugging on, and
+     allow the computer when the phone asks. NetSeer links the phone by itself — its **Settings →
+     Integrations → Over USB** lists linked phones — so there's nothing to type, and it re-links after
+     you unplug and plug back in. NetSeer stays private to that computer.
+
+     Older NetSeer versions without **Over USB** need this in PowerShell on the computer each time you
+     plug in, with the port NetSeer shows next to **This NetSeer** as the last number:
+
+     ```powershell
+     & "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:47331 tcp:47331
+     ```
+
+     With more than one phone or emulator connected, add `-s <serial>` after `adb.exe`
+     (`adb.exe devices` lists serials).
    - **Wi-Fi / network** — in NetSeer turn on **Settings → Integrations → Allow devices on my
      network**, then type the address it shows.
 

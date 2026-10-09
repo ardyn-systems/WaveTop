@@ -13,8 +13,9 @@ object NetSeerAddress {
     const val DEFAULT_PORT = 47331
 
     /**
-     * Over a USB cable the phone talks to its own loopback; `adb reverse tcp:47331 tcp:47331` on the
-     * computer tunnels that port to NetSeer, which by default only listens on 127.0.0.1 anyway.
+     * Over a USB cable the phone talks to its own loopback; `adb reverse tcp:47331 tcp:<NetSeer's port>`
+     * on the computer tunnels that port to NetSeer, which by default only listens on 127.0.0.1 anyway.
+     * Current NetSeer sets the tunnel up itself for plugged-in phones.
      */
     const val USB_BASE_URL = "http://127.0.0.1:$DEFAULT_PORT"
 
@@ -152,7 +153,8 @@ object NetSeerClient {
         }
         is java.net.ConnectException -> "Nothing answered at $baseUrl. " +
             if (baseUrl == NetSeerAddress.USB_BASE_URL) {
-                "Is NetSeer running, the phone plugged in, and `adb reverse tcp:47331 tcp:47331` set up?"
+                "Is NetSeer running, the phone plugged in and unlocked, and USB debugging allowed for this computer? " +
+                    "(Older NetSeer also needs the adb reverse command from Settings → NetSeer.)"
             } else {
                 "Is NetSeer running with \"Allow devices on my network\" turned on?"
             }
