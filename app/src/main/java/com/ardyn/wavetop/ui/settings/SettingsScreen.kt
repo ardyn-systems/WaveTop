@@ -91,6 +91,7 @@ import com.ardyn.wavetop.update.Release
 import com.ardyn.wavetop.update.ReleaseKind
 import com.ardyn.wavetop.update.Releases
 import com.ardyn.wavetop.update.UpdatePhase
+import com.ardyn.wavetop.update.UpdateText
 import com.ardyn.wavetop.update.UpdaterState
 import kotlinx.coroutines.launch
 import java.io.File
@@ -489,6 +490,18 @@ private fun UpdatesPane(vm: AppViewModel, settings: Settings, updates: UpdaterSt
             modifier = Modifier.padding(top = 10.dp),
         )
     }
+    // Android refused the in-app install (usually Play Protect): the browser route still works.
+    val manual = updates.manualInstall
+    val manualApk = manual?.apk
+    if (manual != null && manualApk != null) {
+        WtButton(
+            "Download WaveTop ${manual.version} from GitHub",
+            { openUrl(context, manualApk.url) },
+            Modifier.padding(top = 10.dp),
+            kind = BtnKind.Primary,
+            icon = Icons.AutoMirrored.Outlined.OpenInNew,
+        )
+    }
 
     Spacer(Modifier.height(12.dp))
     SwitchRow(
@@ -582,9 +595,10 @@ private fun ReleaseRow(
                 else -> WtButton("View", onOpen, kind = BtnKind.Ghost)
             }
         }
-        if (release.notes.isNotBlank() && kind != ReleaseKind.Older) {
+        val notes = remember(release.notes) { UpdateText.plainNotes(release.notes) }
+        if (notes.isNotBlank() && kind != ReleaseKind.Older) {
             Text(
-                release.notes.lines().filter { it.isNotBlank() }.take(4).joinToString("\n").replace("**", ""),
+                notes,
                 style = MaterialTheme.typography.bodySmall,
                 color = c.muted,
                 maxLines = 4,

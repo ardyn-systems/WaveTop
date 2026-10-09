@@ -47,19 +47,21 @@ class UpdateReceiver : BroadcastReceiver() {
             }
             PackageInstaller.STATUS_SUCCESS -> updater.reportInstallResult(true, null)
             else -> updater.reportInstallResult(
-                false,
-                intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: describe(status),
+                success = false,
+                // Raw codes like INSTALL_FAILED_VERIFICATION_FAILURE; UpdateText turns them into words.
+                platformMessage = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: statusCode(status),
+                blocked = status == PackageInstaller.STATUS_FAILURE_BLOCKED,
             )
         }
     }
 
-    private fun describe(status: Int): String = when (status) {
-        PackageInstaller.STATUS_FAILURE_ABORTED -> "cancelled"
-        PackageInstaller.STATUS_FAILURE_BLOCKED -> "blocked by the device"
-        PackageInstaller.STATUS_FAILURE_CONFLICT -> "it conflicts with the installed app (different signing key?)"
-        PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> "not compatible with this device"
-        PackageInstaller.STATUS_FAILURE_INVALID -> "the APK is invalid"
-        PackageInstaller.STATUS_FAILURE_STORAGE -> "not enough storage"
+    /** Stand-ins for when the installer gives a status but no message. */
+    private fun statusCode(status: Int): String? = when (status) {
+        PackageInstaller.STATUS_FAILURE_ABORTED -> null // cancelled
+        PackageInstaller.STATUS_FAILURE_CONFLICT -> "INSTALL_FAILED_UPDATE_INCOMPATIBLE"
+        PackageInstaller.STATUS_FAILURE_STORAGE -> "INSTALL_FAILED_INSUFFICIENT_STORAGE"
+        PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> "INSTALL_FAILED_INCOMPATIBLE: not compatible with this phone"
+        PackageInstaller.STATUS_FAILURE_INVALID -> "INSTALL_FAILED_INVALID_APK: the download isn't a valid APK"
         else -> "error $status"
     }
 

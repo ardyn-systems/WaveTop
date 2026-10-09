@@ -175,6 +175,11 @@ The card shows the installed version; **Check** asks GitHub for the list of rele
 - **Check when WaveTop opens** asks GitHub at most once a day; when something new is out, a dot appears
   on the cog and **New** beside Updates.
 
+If Android refuses an update, WaveTop says why in plain words. The usual one is **Google Play
+Protect** not recognising WaveTop's developer yet (WaveTop isn't on the Play Store); WaveTop then offers
+**Download WaveTop … from GitHub** so you can install it from the browser, choosing **More details →
+Install anyway** if Android warns. Your drives are kept either way.
+
 Android can't install an older version over a newer one, so going back means uninstalling first —
 back up your drives under Your data before you do.
 
