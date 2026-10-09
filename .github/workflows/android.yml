@@ -3,6 +3,9 @@ name: Android
 # PRs and main: unit tests + a debug APK (downloadable from the run).
 # A v* tag: the same checks, then a signed release APK + SHA256SUMS published as a GitHub
 # Release — exactly what WaveTop's in-app updater (Settings → Updates) looks for.
+#
+# GitHub's Ubuntu runners ship the Android SDK (ANDROID_HOME) with licences accepted; Gradle
+# downloads the platform it needs. (android-actions/setup-android broke on the current SDK.)
 
 on:
   pull_request:
@@ -29,8 +32,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-
-      - uses: android-actions/setup-android@v3
 
       - uses: gradle/actions/setup-gradle@v4
 
@@ -64,8 +65,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-
-      - uses: android-actions/setup-android@v3
 
       - uses: gradle/actions/setup-gradle@v4
 
