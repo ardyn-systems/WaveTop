@@ -1,0 +1,376 @@
+package com.ardyn.wavetop.ui
+
+import android.app.Application
+import android.os.Build
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.ardyn.wavetop.drive.DriveEntry
+import com.ardyn.wavetop.drive.ExportFormat
+import com.ardyn.wavetop.engine.EngineState
+import com.ardyn.wavetop.engine.SurveyEngine
+import com.ardyn.wavetop.model.DeviceSort
+import com.ardyn.wavetop.model.DeviceTracker
+import com.ardyn.wavetop.model.GeoFix
+import com.ardyn.wavetop.model.ParsedDrive
+import com.ardyn.wavetop.model.PhyFilter
+import com.ardyn.wavetop.model.TrackedDevice
+import com.ardyn.wavetop.model.WifiBand
+import com.ardyn.wavetop.net.NetSeerAddress
+import com.ardyn.wavetop.net.NetSeerClient
+import com.ardyn.wavetop.prefs.AppSettings
+import com.ardyn.wavetop.prefs.NetSeerRoute
+import com.ardyn.wavetop.prefs.Settings
+import com.ardyn.wavetop.update.Updater
+import com.ardyn.wavetop.update.UpdaterState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+
+enum class Tab(val label: String) {
+    Devices("Devices"),
+    Map("Map"),
+    Channels("Channels"),
+    Drives("Drives"),
+    Log("Log"),
+}
+
+enum class MapMode(val label: String) { Street("Street"), Radar("Radar") }
+
+/** NetSeer's geo map offers streets or nothing behind the pins; so does WaveTop. */
+enum class Basemap(val label: String) { Streets("Streets"), None("No basemap") }
+
+enum class DriveTab(val label: String) { Devices("Devices"), Map("Map") }
+
+enum class SettingsPane(val label: String) {
+    General("General"),
+    NetSeer("NetSeer"),
+    Data("Your data"),
+    Updates("Updates"),
+    Help("Help"),
+    About("About"),
+}
+
+/** A saved wardrive opened from the Drives tab, replayed into devices for the table and map. */
+data class OpenDrive(
+    val entry: DriveEntry,
+    val drive: ParsedDrive? = null,
+    val devices: List<TrackedDevice> = emptyList(),
+    /** Where the phone was at each geotagged sighting, in time order: the route driven. */
+    val track: List<GeoFix> = emptyList(),
+    val loading: Boolean = true,
+    val error: String? = null,
+    val tab: DriveTab = DriveTab.Devices,
+    /** Map time slider (epoch ms); null shows the whole drive. */
+    val timeMs: Long? = null,
+)
+
+sealed interface TaskStatus {
+    data object Idle : TaskStatus
+    data class Working(val what: String) : TaskStatus
+    data class Done(val message: String) : TaskStatus
+    data class Failed(val message: String) : TaskStatus
+}
+
+/** Screen-only state; scan data lives in [EngineState], preferences in [Settings]. */
+data class ViewState(
+    val tab: Tab = Tab.Devices,
+    val filter: PhyFilter = PhyFilter.All,
+    val sort: DeviceSort = DeviceSort.Signal,
+    val sortDescending: Boolean = true,
+    val mapMode: MapMode = MapMode.Street,
+    val basemap: Basemap = Basemap.Streets,
+    val band: WifiBand = WifiBand.Band2g,
+    /** Device whose details sheet is open. */
+    val selectedKey: String? = null,
+    /** Device ringed on the maps ("Show on map"). */
+    val highlightKey: String? = null,
+    /** Bumped to make the street map fly to [highlightKey]. */
+    val focusNonce: Int = 0,
+    val openDrive: OpenDrive? = null,
+    /** Settings is open on this pane (null = closed). On phones the list shows first: [settingsList]. */
+    val settingsPane: SettingsPane? = null,
+    val settingsList: Boolean = true,
+    /** Pairing with NetSeer, testing it, or sending a drive. */
+    val netSeerTask: TaskStatus = TaskStatus.Idle,
+    /** Your data: export/delete-all results. */
+    val dataTask: TaskStatus = TaskStatus.Idle,
+)
+
+class AppViewModel(application: Application) : AndroidViewModel(application) {
+    val engine = SurveyEngine.get(application)
+    val engineState: StateFlow<EngineState> = engine.state
+    private val appSettings = AppSettings.get(application)
+    val settings: StateFlow<Settings> = appSettings.state
+    val updater = Updater.get(application)
+    val updates: StateFlow<UpdaterState> = updater.state
+
+    private val _view = MutableStateFlow(ViewState())
+    val view: StateFlow<ViewState> = _view.asStateFlow()
+
+    private var attached = false
+    private var netSeerJob: Job? = null
+
+    // --- lifecycle -------------------------------------------------------------------------
+
+    fun start() {
+        if (attached) return
+        attached = true
+        engine.attachUi()
+        engine.refreshDrives()
+    }
+
+    fun stop() {
+        if (!attached) return
+        attached = false
+        engine.detachUi()
+    }
+
+    override fun onCleared() {
+        stop()
+    }
+
+    fun onPermissionsChanged() = engine.recheck()
+
+    // --- navigation ----------------------------------------------------------------------------
+
+    fun selectTab(tab: Tab) = _view.update { it.copy(tab = tab) }
+
+    fun openSettings(pane: SettingsPane? = null) = _view.update {
+        it.copy(settingsPane = pane ?: SettingsPane.General, settingsList = pane == null)
+    }
+
+    fun showSettingsPane(pane: SettingsPane) = _view.update { it.copy(settingsPane = pane, settingsList = false) }
+
+    fun backInSettings() = _view.update {
+        if (!it.settingsList) it.copy(settingsList = true) else it.copy(settingsPane = null)
+    }
+
+    fun closeSettings() = _view.update { it.copy(settingsPane = null, settingsList = true) }
+
+    // --- live view ---------------------------------------------------------------------------
+
+    fun setLive(live: Boolean) = engine.setLive(live)
+
+    fun setFilter(filter: PhyFilter) = _view.update { it.copy(filter = filter) }
+
+    /** Tapping the active column flips direction; a new column starts in its natural direction. */
+    fun sortBy(sort: DeviceSort) = _view.update {
+        if (it.sort == sort) it.copy(sortDescending = !it.sortDescending)
+        else it.copy(sort = sort, sortDescending = sort.defaultDescending)
+    }
+
+    fun setMapMode(mode: MapMode) = _view.update { it.copy(mapMode = mode) }
+
+    fun setBasemap(basemap: Basemap) = _view.update { it.copy(basemap = basemap) }
+
+    fun setBand(band: WifiBand) = _view.update { it.copy(band = band) }
+
+    fun select(key: String?) = _view.update { it.copy(selectedKey = key, highlightKey = key ?: it.highlightKey) }
+
+    /**
+     * Closes the details sheet and shows the device on a map: the street map if it has been
+     * pinned, otherwise the radar. Works for the live list and for an open wardrive.
+     */
+    fun showOnMap(device: TrackedDevice) = _view.update { v ->
+        val base = v.copy(selectedKey = null, highlightKey = device.key, focusNonce = v.focusNonce + 1)
+        if (v.tab == Tab.Drives && v.openDrive != null) {
+            base.copy(openDrive = v.openDrive.copy(tab = DriveTab.Map, timeMs = null))
+        } else {
+            base.copy(
+                tab = Tab.Map,
+                mapMode = if (device.bestFix != null) MapMode.Street else MapMode.Radar,
+                // Make sure the filter doesn't hide what we're about to show.
+                filter = if (v.filter.matches(device)) v.filter else PhyFilter.All,
+            )
+        }
+    }
+
+    // --- wardrive ----------------------------------------------------------------------------
+
+    fun startWardrive(name: String): Boolean = engine.startWardrive(name)
+
+    fun stopWardrive() = engine.stopWardrive()
+
+    fun openDrive(entry: DriveEntry) {
+        _view.update { it.copy(openDrive = OpenDrive(entry), selectedKey = null, highlightKey = null) }
+        viewModelScope.launch {
+            val drive = engine.loadDrive(entry)
+            // Replay every sighting so the drive reads like a live survey: history, min/max, best pin.
+            val replayed = drive?.let {
+                withContext(Dispatchers.Default) {
+                    val tracker = DeviceTracker(historySize = 60, expireAfterMs = Long.MAX_VALUE / 4)
+                    it.observations.sortedBy { o -> o.timeMs }.forEach(tracker::replay)
+                    val track = it.observations.mapNotNull { o -> o.fix }.sortedBy { f -> f.timeMs }
+                        .distinctBy { f -> f.lat to f.lon }
+                    tracker.devices() to track
+                }
+            }
+            _view.update { v ->
+                if (v.openDrive?.entry?.id != entry.id) return@update v
+                if (drive == null || replayed == null) {
+                    v.copy(openDrive = v.openDrive.copy(loading = false, error = "This file couldn't be read."))
+                } else {
+                    v.copy(
+                        openDrive = v.openDrive.copy(
+                            drive = drive,
+                            devices = replayed.first,
+                            track = replayed.second,
+                            loading = false,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fun closeDrive() = _view.update { it.copy(openDrive = null, selectedKey = null, highlightKey = null) }
+
+    fun setDriveTab(tab: DriveTab) = _view.update { v -> v.copy(openDrive = v.openDrive?.copy(tab = tab)) }
+
+    fun setDriveTime(timeMs: Long?) = _view.update { v -> v.copy(openDrive = v.openDrive?.copy(timeMs = timeMs)) }
+
+    fun deleteDrive(entry: DriveEntry) {
+        engine.deleteDrive(entry)
+        if (_view.value.openDrive?.entry?.id == entry.id) closeDrive()
+    }
+
+    /** Writes an export of the open drive to the share cache. */
+    suspend fun exportOpenDrive(format: ExportFormat): File? {
+        val open = _view.value.openDrive ?: return null
+        val drive = open.drive ?: return null
+        return runCatching { engine.exportDrive(open.entry, drive, format) }
+            .onFailure { engine.log("Export failed: ${it.message}", warning = true) }
+            .getOrNull()
+    }
+
+    // --- settings ------------------------------------------------------------------------------
+
+    fun updateSettings(change: (Settings) -> Settings) = appSettings.update(change)
+
+    fun dismissWelcome() = appSettings.update { it.copy(welcomed = true) }
+
+    /** Your data → export every saved drive as one zip, for backup or moving phones. */
+    suspend fun exportAllDrives(): File? {
+        _view.update { it.copy(dataTask = TaskStatus.Working("Packing your drives…")) }
+        val file = runCatching { engine.exportAllDrives() }.getOrElse {
+            _view.update { v -> v.copy(dataTask = TaskStatus.Failed("Couldn't pack the drives: ${it.message}")) }
+            return null
+        }
+        _view.update {
+            it.copy(dataTask = if (file == null) TaskStatus.Failed("There are no saved drives yet.") else TaskStatus.Idle)
+        }
+        return file
+    }
+
+    fun deleteAllDrives() {
+        viewModelScope.launch {
+            val n = engine.deleteAllDrives()
+            closeDrive()
+            _view.update { it.copy(dataTask = TaskStatus.Done("Deleted $n saved drive${if (n == 1) "" else "s"}.")) }
+        }
+    }
+
+    fun resetSettings() {
+        appSettings.reset()
+        _view.update { it.copy(dataTask = TaskStatus.Done("Settings are back to their defaults.")) }
+    }
+
+    // --- NetSeer ------------------------------------------------------------------------------
+
+    /** The address the chosen route points at, or null if the typed host isn't usable. */
+    fun netSeerBaseUrl(s: Settings = settings.value): String? = when (s.netSeerRoute) {
+        NetSeerRoute.Usb -> NetSeerAddress.USB_BASE_URL
+        NetSeerRoute.Network -> NetSeerAddress.normalize(s.netSeerHost)
+    }
+
+    fun setNetSeerRoute(route: NetSeerRoute) {
+        appSettings.update { it.copy(netSeerRoute = route) }
+        setNetSeerTask(TaskStatus.Idle)
+    }
+
+    fun setNetSeerHost(host: String) {
+        appSettings.update { it.copy(netSeerHost = host) }
+        setNetSeerTask(TaskStatus.Idle)
+    }
+
+    fun resetNetSeerTask() = setNetSeerTask(TaskStatus.Idle)
+
+    /** Is NetSeer there? (`GET /api/v1/info`, no token needed.) */
+    fun testNetSeer() {
+        val url = netSeerBaseUrl() ?: return setNetSeerTask(TaskStatus.Failed("Enter NetSeer's address, e.g. 192.168.1.20"))
+        runNetSeer("Looking for NetSeer at $url…") {
+            NetSeerClient.info(url)
+                .onSuccess { setNetSeerTask(TaskStatus.Done("Found ${it.product} ${it.version} at $url.")) }
+                .onFailure { setNetSeerTask(TaskStatus.Failed(it.message ?: "Not reachable")) }
+        }
+    }
+
+    /** Trade the 6-digit code from NetSeer's Settings → Integrations for a device token. */
+    fun pairNetSeer(code: String) {
+        val url = netSeerBaseUrl() ?: return setNetSeerTask(TaskStatus.Failed("Enter NetSeer's address, e.g. 192.168.1.20"))
+        if (code.isBlank()) return setNetSeerTask(TaskStatus.Failed("Type the pairing code NetSeer shows."))
+        runNetSeer("Pairing with NetSeer…") {
+            NetSeerClient.pair(url, code, deviceName())
+                .onSuccess { link ->
+                    appSettings.update { it.copy(netSeer = link) }
+                    engine.log("Paired with NetSeer at $url")
+                    setNetSeerTask(TaskStatus.Done("Paired. Drives can now go straight to NetSeer."))
+                }
+                .onFailure { setNetSeerTask(TaskStatus.Failed(it.message ?: "Pairing failed")) }
+        }
+    }
+
+    /** Forget the token here; NetSeer's Settings → Integrations can revoke it there too. */
+    fun unpairNetSeer() {
+        appSettings.update { it.copy(netSeer = null) }
+        setNetSeerTask(TaskStatus.Done("Unpaired. Also remove this phone in NetSeer → Settings → Integrations."))
+    }
+
+    /**
+     * Pushes the open drive to the paired NetSeer as a WiGLE CSV: Wi-Fi *and* Bluetooth with the
+     * GPS position of every sighting, which NetSeer maps and turns into location estimates.
+     */
+    fun sendOpenDriveToNetSeer() {
+        val open = _view.value.openDrive ?: return
+        val drive = open.drive ?: return
+        val link = settings.value.netSeer
+            ?: return setNetSeerTask(TaskStatus.Failed("Pair with NetSeer first: Settings → NetSeer."))
+        if (drive.observations.none { it.fix != null }) {
+            return setNetSeerTask(TaskStatus.Failed("Nothing in this drive has a GPS position, so there's nothing to map."))
+        }
+        runNetSeer("Sending \"${open.entry.meta.name}\" to NetSeer…") {
+            val file = runCatching { engine.exportDrive(open.entry, drive, ExportFormat.WigleCsv) }.getOrElse {
+                setNetSeerTask(TaskStatus.Failed("Couldn't build the export: ${it.message}"))
+                return@runNetSeer
+            }
+            NetSeerClient.pushCapture(link, file, open.entry.meta.name, format = "csv")
+                .onSuccess {
+                    setNetSeerTask(TaskStatus.Done(it))
+                    engine.log("Sent \"${open.entry.meta.name}\" to NetSeer")
+                }
+                .onFailure { setNetSeerTask(TaskStatus.Failed(it.message ?: "Send failed")) }
+        }
+    }
+
+    private fun runNetSeer(what: String, block: suspend () -> Unit) {
+        netSeerJob?.cancel()
+        netSeerJob = viewModelScope.launch {
+            setNetSeerTask(TaskStatus.Working(what))
+            block()
+        }
+    }
+
+    private fun setNetSeerTask(status: TaskStatus) = _view.update { it.copy(netSeerTask = status) }
+
+    /** How this phone appears in NetSeer's paired-devices list. */
+    private fun deviceName(): String {
+        val model = Build.MODEL.orEmpty().ifBlank { "Android" }
+        return "WaveTop on $model"
+    }
+}
