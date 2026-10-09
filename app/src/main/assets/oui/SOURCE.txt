@@ -1,0 +1,1 @@
+IEEE MA-L OUI registry (https://standards-oui.ieee.org/oui/oui.csv), converted to gzipped TSV for manufacturer lookup.
