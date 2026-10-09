@@ -15,11 +15,15 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,6 +58,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -93,6 +98,7 @@ import com.ardyn.wavetop.update.Releases
 import com.ardyn.wavetop.update.UpdatePhase
 import com.ardyn.wavetop.update.UpdateText
 import com.ardyn.wavetop.update.UpdaterState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -215,6 +221,8 @@ private fun PaneBody(
     Column(
         modifier
             .fillMaxHeight()
+            // Shrink above the keyboard so the focused field (the pairing code) scrolls into view.
+            .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp)
             .padding(bottom = 24.dp)
@@ -296,6 +304,7 @@ private fun GeneralPane(vm: AppViewModel, settings: Settings) {
 
 // --- NetSeer -------------------------------------------------------------------------------
 
+@OptIn(ExperimentalFoundationApi::class) // BringIntoViewRequester
 @Composable
 private fun NetSeerPane(vm: AppViewModel, view: ViewState, settings: Settings) {
     val c = Wt.colors
@@ -334,9 +343,18 @@ private fun NetSeerPane(vm: AppViewModel, view: ViewState, settings: Settings) {
     Spacer(Modifier.height(10.dp))
     when (settings.netSeerRoute) {
         NetSeerRoute.Usb -> {
-            Hint("Plug the phone into the computer running NetSeer (USB debugging on), then run this once on the computer:")
+            Hint(
+                "Plug the phone into the computer running NetSeer with USB debugging on, and allow the computer " +
+                    "when the phone asks. If NetSeer's Settings → Integrations has an \"Over USB\" section, it " +
+                    "links the phone by itself: nothing to type.",
+            )
+            Hint(
+                "Older NetSeer: run this in PowerShell on the computer each time you plug in, with NetSeer's " +
+                    "port (shown next to \"This NetSeer\") as the last number:",
+                Modifier.padding(top = 8.dp),
+            )
             Text(
-                "adb reverse tcp:47331 tcp:47331",
+                "& \"\$env:LOCALAPPDATA\\Android\\Sdk\\platform-tools\\adb.exe\" reverse tcp:47331 tcp:47331",
                 style = MonoStyle.copy(fontSize = 13.sp),
                 color = c.text,
                 modifier = Modifier
@@ -347,7 +365,7 @@ private fun NetSeerPane(vm: AppViewModel, view: ViewState, settings: Settings) {
                     .border(1.dp, c.line, RoundedCornerShape(6.dp))
                     .padding(10.dp),
             )
-            Hint("NetSeer stays private to that computer; nothing else on the network can reach it.")
+            Hint("With more than one phone or emulator connected, add -s and the phone's serial after adb.exe. NetSeer stays private to that computer; nothing else on the network can reach it.")
         }
         NetSeerRoute.Network -> {
             WtTextField(
@@ -371,17 +389,26 @@ private fun NetSeerPane(vm: AppViewModel, view: ViewState, settings: Settings) {
     SectionLabel("2 · Pair")
     Hint("In NetSeer: Settings → Integrations → Pair a device. Type the code it shows (it lasts five minutes).")
     Spacer(Modifier.height(8.dp))
-    WtTextField(
-        code,
-        { code = it.filter { ch -> ch.isLetterOrDigit() }.take(8).uppercase() },
-        "Pairing code",
-        placeholder = "ABC123",
-        mono = true,
-        onDone = { vm.pairNetSeer(code) },
-    )
-    Spacer(Modifier.height(10.dp))
-    WtButton("Pair", { vm.pairNetSeer(code) }, kind = BtnKind.Primary, enabled = view.netSeerTask !is TaskStatus.Working)
-    StatusLine(view.netSeerTask)
+    // Keep the code field and the Pair button above the keyboard together, not just the field.
+    val pairRow = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
+    Column(Modifier.bringIntoViewRequester(pairRow)) {
+        WtTextField(
+            code,
+            { code = it.filter(Char::isDigit).take(6) },
+            "Pairing code",
+            Modifier.onFocusChanged { focus ->
+                if (focus.isFocused) scope.launch { delay(350); pairRow.bringIntoView() }
+            },
+            placeholder = "123456",
+            keyboardType = KeyboardType.NumberPassword,
+            mono = true,
+            onDone = { vm.pairNetSeer(code) },
+        )
+        Spacer(Modifier.height(10.dp))
+        WtButton("Pair", { vm.pairNetSeer(code) }, kind = BtnKind.Primary, enabled = view.netSeerTask !is TaskStatus.Working)
+        StatusLine(view.netSeerTask)
+    }
 }
 
 // --- Your data -----------------------------------------------------------------------------
