@@ -46,6 +46,11 @@ The [user guide](docs/user-guide.md) walks through every screen with screenshots
 
 Needs Android 7.0 or newer. `SHA256SUMS.txt` on each release lists the APK's checksum.
 
+**If Google Play Protect objects** ("hasn't seen an app from this developer before"): WaveTop isn't on
+the Play Store, so Play Protect may not recognise its developer yet. Tap **More details → Install
+anyway** if your phone offers it. The same applies to in-app updates; if one is refused, Settings →
+Updates offers the APK to download and install from the browser instead.
+
 ### Why those permissions
 
 | Permission | Why |

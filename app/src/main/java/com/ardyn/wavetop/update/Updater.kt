@@ -47,6 +47,8 @@ data class UpdaterState(
     /** Last outcome, e.g. "WaveTop is up to date" or why something failed. */
     val message: String? = null,
     val messageIsError: Boolean = false,
+    /** Android refused this release (e.g. Play Protect); the screen offers its APK to install by hand. */
+    val manualInstall: Release? = null,
 )
 
 /**
@@ -65,6 +67,8 @@ class Updater private constructor(private val context: Context) {
     private val _state = MutableStateFlow(UpdaterState())
     val state: StateFlow<UpdaterState> = _state.asStateFlow()
     private var job: Job? = null
+    /** The release handed to Android's installer, until it reports back. */
+    private var installing: Release? = null
 
     /** The running version without the "-debug" suffix debug builds carry. */
     val installedVersion: String = BuildConfig.VERSION_NAME.substringBefore("-")
@@ -125,6 +129,8 @@ class Updater private constructor(private val context: Context) {
             _state.update { it.copy(phase = UpdatePhase.NeedsInstallPermission(release), message = null) }
             return
         }
+        installing = release
+        _state.update { it.copy(manualInstall = null) }
         job = scope.launch {
             try {
                 val file = withContext(Dispatchers.IO) {
@@ -154,13 +160,25 @@ class Updater private constructor(private val context: Context) {
 
     fun cancelPermissionPrompt() = _state.update { it.copy(phase = UpdatePhase.Idle) }
 
-    /** Called by [UpdateReceiver] when Android's installer reports a failure or a cancel. */
-    fun reportInstallResult(success: Boolean, message: String?) {
+    /**
+     * Called by [UpdateReceiver] with Android's verdict. Failures are explained in plain words
+     * ([UpdateText.installFailure]); when installing by hand could still work — Play Protect not
+     * knowing WaveTop's developer yet is the common one — the screen offers the APK.
+     */
+    fun reportInstallResult(success: Boolean, platformMessage: String?, blocked: Boolean = false) {
+        val release = installing
+        installing = null
+        if (success) {
+            _state.update { it.copy(phase = UpdatePhase.Idle, message = "Installed. WaveTop will restart.", messageIsError = false) }
+            return
+        }
+        val failure = UpdateText.installFailure(platformMessage, blocked)
         _state.update {
             it.copy(
                 phase = UpdatePhase.Idle,
-                message = if (success) "Installed. WaveTop will restart." else "The update didn't install: ${message ?: "cancelled"}",
-                messageIsError = !success,
+                message = failure.message,
+                messageIsError = true,
+                manualInstall = release?.takeIf { failure.offerDownload && it.apk != null },
             )
         }
     }
