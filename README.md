@@ -76,8 +76,10 @@ version over a newer one, so rolling back means uninstalling first — back up y
 
 ## Sending surveys to NetSeer
 
-In NetSeer: **Settings → Integrations → Pair a device** shows a six-digit code. In WaveTop:
-**Settings → NetSeer**, choose how to reach it, type the code, **Pair**.
+In NetSeer: **Settings → Integrations → Pair a device** shows a QR code and a six-digit code. In WaveTop:
+**Settings → NetSeer**, then **Scan QR code** and point the camera at NetSeer's screen — the QR carries
+NetSeer's address and the code, so there's nothing to type and it works over USB, Wi-Fi, or a private
+network like Tailscale. Or choose how to reach it and type the six-digit code by hand.
 
 - **USB cable** — plug the phone into the computer running NetSeer with USB debugging on and allow the
   computer when asked. NetSeer links it by itself (**Settings → Integrations → Over USB** lists linked

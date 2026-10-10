@@ -20,6 +20,9 @@
 
     <!-- Map tiles, update checks, and sending captures to NetSeer. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Camera: only for scanning NetSeer's pairing QR (Settings → NetSeer → Scan QR code). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- Survey keeps scanning with the screen off from a location foreground service. -->
