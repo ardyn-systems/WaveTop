@@ -101,5 +101,11 @@ dependencies {
     // Street map: OpenStreetMap tiles, no Play services or API key.
     implementation("org.osmdroid:osmdroid-android:6.1.20")
 
+    // WebSocket for streaming a live wardrive to NetSeer. (HTTP pairing/push still uses HttpURLConnection.)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     testImplementation("junit:junit:4.13.2")
+    // The real org.json so JSON-building code (e.g. the live-stream serializer) runs under unit tests,
+    // instead of the android.jar stub that throws "not mocked".
+    testImplementation("org.json:json:20240303")
 }

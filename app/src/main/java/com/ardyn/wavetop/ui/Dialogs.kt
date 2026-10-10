@@ -103,18 +103,29 @@ fun WtTextField(
 
 /** Asks for the wardrive's name up front; it's saved under that name when stopped. */
 @Composable
-fun WardriveStartDialog(onStart: (String) -> Unit, onDismiss: () -> Unit) {
+fun WardriveStartDialog(onStart: (String, Boolean) -> Unit, canStream: Boolean, onDismiss: () -> Unit) {
     val default = remember { "Drive " + SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date()) }
     var name by remember { mutableStateOf(default) }
+    var stream by remember { mutableStateOf(canStream) }
+    fun start() = onStart(name, stream && canStream)
     WtDialog(
         title = "Start a wardrive",
         onDismiss = onDismiss,
-        confirm = { WtButton("Start", { onStart(name) }, kind = BtnKind.Primary) },
+        confirm = { WtButton("Start", { start() }, kind = BtnKind.Primary) },
         dismiss = { WtButton("Cancel", onDismiss, kind = BtnKind.Ghost) },
     ) {
         Column {
-            WtTextField(name, { name = it.take(80) }, "Save as", onDone = { onStart(name) })
+            WtTextField(name, { name = it.take(80) }, "Save as", onDone = { start() })
             Spacer(Modifier.height(10.dp))
+            if (canStream) {
+                SwitchRow(
+                    title = "Stream live to NetSeer",
+                    subtitle = "NetSeer builds the map as you drive. The drive is still saved and can be sent again after.",
+                    checked = stream,
+                    onChange = { stream = it },
+                )
+                Spacer(Modifier.height(10.dp))
+            }
             Hint(
                 "Records every device with the time and GPS position it was heard. It keeps going with " +
                     "the screen off and saves under this name when you stop. Some phones pause Bluetooth LE " +

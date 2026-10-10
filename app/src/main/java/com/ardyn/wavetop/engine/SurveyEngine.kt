@@ -15,6 +15,8 @@ import com.ardyn.wavetop.model.GeoFix
 import com.ardyn.wavetop.model.ParsedDrive
 import com.ardyn.wavetop.model.TrackedDevice
 import com.ardyn.wavetop.model.TrackerUpdate
+import com.ardyn.wavetop.net.LiveState
+import com.ardyn.wavetop.net.NetSeerLiveSession
 import com.ardyn.wavetop.oui.OuiLookup
 import com.ardyn.wavetop.permissions.SurveyPermissions
 import com.ardyn.wavetop.prefs.AppSettings
@@ -68,6 +70,8 @@ data class EngineState(
     val messages: List<SurveyMessage> = emptyList(),
     val fix: GeoFix? = null,
     val wardrive: WardriveStatus? = null,
+    /** Set while the running wardrive is being streamed to NetSeer; null when not streaming. */
+    val liveStream: LiveState? = null,
     /** Saved wardrives, newest first. */
     val drives: List<DriveEntry> = emptyList(),
 )
@@ -100,6 +104,7 @@ class SurveyEngine private constructor(private val app: Application) {
     private var uiAttached = false
     private var receiversOn = false
     private var recorder: WardriveRecorder? = null
+    private var liveSession: NetSeerLiveSession? = null
     private var liveJob: Job? = null
     private var wifiScanTimeout: Job? = null
     private var lastWifiScanMs = Long.MIN_VALUE / 2
@@ -137,7 +142,7 @@ class SurveyEngine private constructor(private val app: Application) {
     // --- wardrive ----------------------------------------------------------------------------
 
     /** @return false if it couldn't start (already running, no access, or the file couldn't be created). */
-    fun startWardrive(name: String): Boolean {
+    fun startWardrive(name: String, streamLive: Boolean = false): Boolean {
         if (recorder != null) return false
         refreshAccess()
         if (_state.value.access != SurveyAccess.Ready) {
@@ -154,6 +159,7 @@ class SurveyEngine private constructor(private val app: Application) {
         publishWardrive()
         refreshDrives()
         log("Wardrive \"$title\" started")
+        if (streamLive) startLiveStream()
         try {
             ContextCompat.startForegroundService(app, Intent(app, WardriveService::class.java))
         } catch (e: RuntimeException) {
@@ -168,6 +174,9 @@ class SurveyEngine private constructor(private val app: Application) {
     fun stopWardrive() {
         val rec = recorder ?: return
         recorder = null
+        liveSession?.stop()
+        liveSession = null
+        _state.update { it.copy(liveStream = null) }
         try {
             val meta = rec.finish(System.currentTimeMillis())
             val minutes = ((meta.endedMs ?: rec.startedMs) - rec.startedMs) / 60_000
@@ -332,10 +341,31 @@ class SurveyEngine private constructor(private val app: Application) {
                 stopWardrive()
             }
         }
+        liveSession?.offer(update.observations, _state.value.fix)
         tracker.expire(now)
         bluetooth.forgetBefore(now - EXPIRE_MS)
         _state.update { it.copy(devices = tracker.devices()) }
         publishWardrive()
+    }
+
+    // --- live streaming to NetSeer -----------------------------------------------------------
+
+    private fun startLiveStream() {
+        val link = AppSettings.get(app).current.netSeer
+        if (link == null) {
+            log("Live streaming skipped — pair with NetSeer first under Settings → NetSeer", warning = true)
+            return
+        }
+        _state.update { it.copy(liveStream = LiveState.Connecting) }
+        // onState arrives on an OkHttp thread; hop back to the engine's main-thread scope.
+        liveSession = NetSeerLiveSession(link) { s -> scope.launch { onLiveState(s) } }.also { it.start() }
+        log("Streaming this wardrive live to NetSeer (${link.deviceName})")
+    }
+
+    private fun onLiveState(s: LiveState) {
+        if (liveSession == null) return
+        _state.update { it.copy(liveStream = if (s == LiveState.Closed) null else s) }
+        if (s == LiveState.Error) log("Live streaming to NetSeer stopped — connection lost", warning = true)
     }
 
     private fun publishWardrive() {

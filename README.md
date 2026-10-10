@@ -32,6 +32,9 @@ APIs: no root, no monitor mode, no Google Play services. Nothing leaves your pho
   and a time slider to replay it.
 - **Send to NetSeer** — pair once, then push any drive to NetSeer with one tap (Wi-Fi and Bluetooth,
   with positions). Or share a drive as WiGLE CSV, Kismet netxml, or the raw recording.
+- **Live to NetSeer** — turn on **Stream live to NetSeer** when you start a drive and NetSeer builds
+  the map as you go, access points appearing as you pass them. The drive is still saved, so you can
+  send the full recording (Bluetooth included) afterwards too.
 - **Log** — what WaveTop noticed: new devices, radios switching, scan throttling, drives.
 - **Settings** — the **WaveTop** theme in the logo's cyan and orange (the default), plus three shared with
   NetSeer (**Terrain**, **Blueprint**, **Daylight**), 12/24-hour
