@@ -8,7 +8,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class WardriveFormatTest {
+class SurveyFormatTest {
     private fun obs(
         mac: String,
         time: Long,
@@ -32,57 +32,57 @@ class WardriveFormatTest {
     )
 
     private fun file(vararg o: Observation, finished: Boolean = true): String = buildString {
-        append(WardriveCsv.header("Downtown, loop", 1_000))
-        o.forEach { append(WardriveCsv.row(it)) }
-        if (finished) append(WardriveCsv.footer(9_000, o.size, 1, 1, o.count { it.fix != null }))
+        append(SurveyCsv.header("Downtown, loop", 1_000))
+        o.forEach { append(SurveyCsv.row(it)) }
+        if (finished) append(SurveyCsv.footer(9_000, o.size, 1, 1, o.count { it.fix != null }))
     }
 
     @Test
-    fun `round trips a drive, including commas and quotes`() {
+    fun `round trips a survey, including commas and quotes`() {
         val a = obs("AA:BB:CC:00:00:01", 2_000, -50)
         val b = obs("11:22:33:44:55:66", 3_000, -70, lat = null, phy = Phy.Bluetooth, name = "Buds")
-        val drive = WardriveCsv.parse(file(a, b).lineSequence())!!
-        assertEquals("Downtown, loop", drive.meta.name)
-        assertEquals(1_000L, drive.meta.startedMs)
-        assertEquals(9_000L, drive.meta.endedMs)
-        assertEquals(8_000L, drive.durationMs)
-        assertFalse(drive.meta.interrupted)
-        assertEquals(listOf(a, b), drive.observations)
+        val survey = SurveyCsv.parse(file(a, b).lineSequence())!!
+        assertEquals("Downtown, loop", survey.meta.name)
+        assertEquals(1_000L, survey.meta.startedMs)
+        assertEquals(9_000L, survey.meta.endedMs)
+        assertEquals(8_000L, survey.durationMs)
+        assertFalse(survey.meta.interrupted)
+        assertEquals(listOf(a, b), survey.observations)
     }
 
     @Test
-    fun `an interrupted drive still opens, ending at its last sighting`() {
+    fun `an interrupted survey still opens, ending at its last sighting`() {
         val text = file(obs("AA:BB:CC:00:00:01", 2_000, -50), obs("AA:BB:CC:00:00:01", 5_000, -40), finished = false) +
             "5500,wifi,AA:BB" // half-written row from a power cut
-        val drive = WardriveCsv.parse(text.lineSequence())!!
-        assertTrue(drive.meta.interrupted)
-        assertEquals(2, drive.observations.size)
-        assertEquals(4_000L, drive.durationMs)
+        val survey = SurveyCsv.parse(text.lineSequence())!!
+        assertTrue(survey.meta.interrupted)
+        assertEquals(2, survey.observations.size)
+        assertEquals(4_000L, survey.durationMs)
     }
 
     @Test
     fun `meta comes from the comment lines alone`() {
         val comments = file(obs("AA:BB:CC:00:00:01", 2_000, -50)).lines().filter { it.startsWith("#") }
-        val meta = WardriveCsv.parseMeta(comments)!!
+        val meta = SurveyCsv.parseMeta(comments)!!
         assertEquals(1, meta.observations)
         assertEquals(1, meta.geotagged)
     }
 
     @Test
-    fun `not a wardrive file`() {
-        assertNull(WardriveCsv.parse(sequenceOf("BSSID,ESSID", "aa,bb")))
+    fun `not a survey file`() {
+        assertNull(SurveyCsv.parse(sequenceOf("BSSID,ESSID", "aa,bb")))
     }
 
     @Test
     fun `kismet netxml has one network per bssid placed at its strongest sighting`() {
-        val drive = WardriveCsv.parse(
+        val survey = SurveyCsv.parse(
             file(
                 obs("aa:bb:cc:00:00:01", 2_000, -70, lat = 37.1),
                 obs("aa:bb:cc:00:00:01", 3_000, -40, lat = 37.2),
                 obs("11:22:33:44:55:66", 3_000, -40, phy = Phy.Bluetooth),
             ).lineSequence(),
         )!!
-        val xml = DriveExport.kismetNetxml(drive)
+        val xml = SurveyExport.kismetNetxml(survey)
         assertTrue(xml.contains("<detection-run"))
         assertEquals(1, Regex("<wireless-network ").findAll(xml).count())
         assertTrue(xml.contains("<BSSID>AA:BB:CC:00:00:01</BSSID>"))
@@ -94,14 +94,14 @@ class WardriveFormatTest {
 
     @Test
     fun `wigle csv lists only geotagged sightings`() {
-        val drive = WardriveCsv.parse(
+        val survey = SurveyCsv.parse(
             file(
                 obs("AA:BB:CC:00:00:01", 2_000, -50),
                 obs("AA:BB:CC:00:00:02", 2_000, -50, lat = null),
                 obs("11:22:33:44:55:66", 3_000, -60, phy = Phy.Bluetooth, name = "Buds"),
             ).lineSequence(),
         )!!
-        val lines = DriveExport.wigleCsv(drive, DriveExport.DeviceInfo("WaveTop-1", "Pixel", "15", "x", "google")).trim().lines()
+        val lines = SurveyExport.wigleCsv(survey, SurveyExport.DeviceInfo("WaveTop-1", "Pixel", "15", "x", "google")).trim().lines()
         assertTrue(lines[0].startsWith("WigleWifi-1.4,"))
         assertEquals(2 + 2, lines.size)
         assertTrue(lines[2].startsWith("aa:bb:cc:00:00:01,\"Home, \"\"Net\"\"\",[WPA2-PSK-CCMP][ESS],1970-01-01 00:00:02,6,-50,"))

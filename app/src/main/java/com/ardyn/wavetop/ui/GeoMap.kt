@@ -82,7 +82,7 @@ private val OperatorColor = Color(0xFFFF5A3C)
 
 /**
  * The street map, after NetSeer's geo map: devices pinned where they were heard loudest, your
- * position (live) or the route driven (saved drive), a legend card, zoom controls at the bottom
+ * position (live) or the route driven (saved survey), a legend card, zoom controls at the bottom
  * right, and a pop-up card for whatever you tap. Tiles are tinted to the theme.
  */
 @Composable
@@ -96,7 +96,7 @@ fun GeoMap(
     showLabels: Boolean,
     onDetails: (String) -> Unit,
     modifier: Modifier = Modifier,
-    /** Live survey: shows you. Saved drive: shows [track] (up to [timeMs]) instead. */
+    /** Live survey: shows you. Saved survey: shows [track] (up to [timeMs]) instead. */
     live: Boolean = true,
     track: List<GeoFix> = emptyList(),
     timeMs: Long? = null,
@@ -134,7 +134,7 @@ fun GeoMap(
         }
     }
 
-    // A saved drive's map can be scrubbed through time: only what had been heard by then.
+    // A saved survey's map can be scrubbed through time: only what had been heard by then.
     val shownTrack = if (timeMs == null) track else track.filter { it.timeMs <= timeMs }
     val pinned = devices.filter { it.bestFix != null && (timeMs == null || it.firstSeenMs <= timeMs) }
     val highlighted = pinned.firstOrNull { it.key == highlightKey }
@@ -152,7 +152,7 @@ fun GeoMap(
         mapView.controller.animateTo(GeoPoint(target.lat, target.lon), maxOf(mapView.zoomLevelDouble, 18.0), 600L)
         centered = true
     }
-    // Fit a saved drive's route the first time its map opens.
+    // Fit a saved survey's route the first time its map opens.
     LaunchedEffect(live, track.size) {
         if (!live && track.size >= 2 && highlightKey == null) {
             mapView.post { mapView.zoomToBoundingBox(boundsOf(track.map { GeoPoint(it.lat, it.lon) }), false, dpPx(context, 48)) }
@@ -186,7 +186,7 @@ fun GeoMap(
             )
             pinned.isEmpty() -> MapNote(
                 if (live) "No pins yet. Keep scanning and move around: each device is pinned where it's loudest."
-                else "No sighting in this drive had an accurate enough GPS fix to pin.",
+                else "No sighting in this survey had an accurate enough GPS fix to pin.",
                 Modifier.align(Alignment.TopEnd).padding(12.dp),
             )
             highlightKey != null && highlighted == null -> MapNote(

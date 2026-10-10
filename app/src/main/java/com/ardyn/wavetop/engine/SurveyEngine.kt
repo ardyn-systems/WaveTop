@@ -5,14 +5,14 @@ import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
-import com.ardyn.wavetop.drive.DriveEntry
-import com.ardyn.wavetop.drive.ExportFormat
-import com.ardyn.wavetop.drive.WardriveRecorder
-import com.ardyn.wavetop.drive.WardriveService
-import com.ardyn.wavetop.drive.WardriveStore
+import com.ardyn.wavetop.survey.SurveyEntry
+import com.ardyn.wavetop.survey.ExportFormat
+import com.ardyn.wavetop.survey.SurveyRecorder
+import com.ardyn.wavetop.survey.SurveyService
+import com.ardyn.wavetop.survey.SurveyStore
 import com.ardyn.wavetop.model.DeviceTracker
 import com.ardyn.wavetop.model.GeoFix
-import com.ardyn.wavetop.model.ParsedDrive
+import com.ardyn.wavetop.model.ParsedSurvey
 import com.ardyn.wavetop.model.TrackedDevice
 import com.ardyn.wavetop.model.TrackerUpdate
 import com.ardyn.wavetop.net.LiveState
@@ -45,8 +45,8 @@ enum class RadioState { On, Off, Unavailable }
 
 data class SurveyMessage(val timeMs: Long, val text: String, val warning: Boolean = false)
 
-/** A wardrive in progress. */
-data class WardriveStatus(
+/** A survey in progress. */
+data class SurveyStatus(
     val name: String,
     val startedMs: Long,
     val observations: Int,
@@ -69,17 +69,17 @@ data class EngineState(
     /** Newest first. */
     val messages: List<SurveyMessage> = emptyList(),
     val fix: GeoFix? = null,
-    val wardrive: WardriveStatus? = null,
-    /** Set while the running wardrive is being streamed to NetSeer; null when not streaming. */
+    val survey: SurveyStatus? = null,
+    /** Set while the running survey is being streamed to NetSeer; null when not streaming. */
     val liveStream: LiveState? = null,
-    /** Saved wardrives, newest first. */
-    val drives: List<DriveEntry> = emptyList(),
+    /** Saved surveys, newest first. */
+    val surveys: List<SurveyEntry> = emptyList(),
 )
 
 /**
  * The scanning engine, one per process so it can outlive the survey screen: the screen
- * attaches while it's visible, and a running wardrive keeps it going (from
- * [WardriveService]) with the screen closed or the phone locked.
+ * attaches while it's visible, and a running survey keeps it going (from
+ * [SurveyService]) with the screen closed or the phone locked.
  *
  * Main thread only.
  */
@@ -96,14 +96,14 @@ class SurveyEngine private constructor(private val app: Application) {
     private val bluetooth = BluetoothSurveyScanner(app, oui)
     private val location = LocationTracker(app)
     private val tracker = DeviceTracker(expireAfterMs = EXPIRE_MS)
-    private val store = WardriveStore(app)
+    private val store = SurveyStore(app)
 
     private val _state = MutableStateFlow(EngineState(live = AppSettings.get(app).current.liveOnOpen))
     val state: StateFlow<EngineState> = _state.asStateFlow()
 
     private var uiAttached = false
     private var receiversOn = false
-    private var recorder: WardriveRecorder? = null
+    private var recorder: SurveyRecorder? = null
     private var liveSession: NetSeerLiveSession? = null
     private var liveJob: Job? = null
     private var wifiScanTimeout: Job? = null
@@ -111,7 +111,7 @@ class SurveyEngine private constructor(private val app: Application) {
     private var lastBluetoothScanMs = Long.MIN_VALUE / 2
 
     init {
-        refreshDrives()
+        refreshSurveys()
     }
 
     // --- who needs the radios --------------------------------------------------------------
@@ -139,29 +139,29 @@ class SurveyEngine private constructor(private val app: Application) {
         update()
     }
 
-    // --- wardrive ----------------------------------------------------------------------------
+    // --- survey ----------------------------------------------------------------------------
 
     /** @return false if it couldn't start (already running, no access, or the file couldn't be created). */
-    fun startWardrive(name: String, streamLive: Boolean = false): Boolean {
+    fun startSurvey(name: String, streamLive: Boolean = false): Boolean {
         if (recorder != null) return false
         refreshAccess()
         if (_state.value.access != SurveyAccess.Ready) {
-            log("Wardrive not started: scan access is missing", warning = true)
+            log("Survey not started: scan access is missing", warning = true)
             return false
         }
-        val title = name.trim().ifBlank { "Wardrive" }
+        val title = name.trim().ifBlank { "Survey" }
         recorder = try {
-            WardriveRecorder(store.newFile(title), title, System.currentTimeMillis())
+            SurveyRecorder(store.newFile(title), title, System.currentTimeMillis())
         } catch (e: IOException) {
-            log("Wardrive not started: ${e.message}", warning = true)
+            log("Survey not started: ${e.message}", warning = true)
             return false
         }
-        publishWardrive()
-        refreshDrives()
-        log("Wardrive \"$title\" started")
+        publishSurvey()
+        refreshSurveys()
+        log("Survey \"$title\" started")
         if (streamLive) startLiveStream()
         try {
-            ContextCompat.startForegroundService(app, Intent(app, WardriveService::class.java))
+            ContextCompat.startForegroundService(app, Intent(app, SurveyService::class.java))
         } catch (e: RuntimeException) {
             // Still records while the screen is open; it just won't survive the app closing.
             log("Background recording unavailable (${e.javaClass.simpleName}); keep WaveTop open", warning = true)
@@ -170,8 +170,8 @@ class SurveyEngine private constructor(private val app: Application) {
         return true
     }
 
-    /** Stops the wardrive and saves it. */
-    fun stopWardrive() {
+    /** Stops the survey and saves it. */
+    fun stopSurvey() {
         val rec = recorder ?: return
         recorder = null
         liveSession?.stop()
@@ -181,50 +181,50 @@ class SurveyEngine private constructor(private val app: Application) {
             val meta = rec.finish(System.currentTimeMillis())
             val minutes = ((meta.endedMs ?: rec.startedMs) - rec.startedMs) / 60_000
             log(
-                "Wardrive \"${meta.name}\" saved · ${minutes} min · " +
+                "Survey \"${meta.name}\" saved · ${minutes} min · " +
                     "${meta.wifiDevices} Wi-Fi, ${meta.bluetoothDevices} BT, ${meta.geotagged} geotagged sightings",
             )
         } catch (e: IOException) {
-            log("Wardrive \"${rec.name}\" could not be finalised: ${e.message}", warning = true)
+            log("Survey \"${rec.name}\" could not be finalised: ${e.message}", warning = true)
         }
-        _state.update { it.copy(wardrive = null) }
-        app.stopService(Intent(app, WardriveService::class.java))
-        refreshDrives()
+        _state.update { it.copy(survey = null) }
+        app.stopService(Intent(app, SurveyService::class.java))
+        refreshSurveys()
         update()
     }
 
-    fun refreshDrives() {
-        // The drive being recorded has no footer yet and isn't "saved"; it has its own card.
+    fun refreshSurveys() {
+        // The survey being recorded has no footer yet and isn't "saved"; it has its own card.
         val recording = recorder?.file
         scope.launch {
             val list = withContext(Dispatchers.IO) { store.list().filter { it.file != recording } }
-            _state.update { it.copy(drives = list) }
+            _state.update { it.copy(surveys = list) }
         }
     }
 
-    suspend fun loadDrive(entry: DriveEntry): ParsedDrive? = withContext(Dispatchers.IO) { store.load(entry) }
+    suspend fun loadSurvey(entry: SurveyEntry): ParsedSurvey? = withContext(Dispatchers.IO) { store.load(entry) }
 
-    suspend fun exportDrive(entry: DriveEntry, drive: ParsedDrive, format: ExportFormat): File =
-        withContext(Dispatchers.IO) { store.export(entry, drive, format) }
+    suspend fun exportSurvey(entry: SurveyEntry, survey: ParsedSurvey, format: ExportFormat): File =
+        withContext(Dispatchers.IO) { store.export(entry, survey, format) }
 
-    suspend fun exportAllDrives(): File? = withContext(Dispatchers.IO) {
+    suspend fun exportAllSurveys(): File? = withContext(Dispatchers.IO) {
         store.exportAll(java.text.SimpleDateFormat("yyyy-MM-dd-HHmm", java.util.Locale.US).format(java.util.Date()))
     }
 
-    /** Deletes every saved drive (never the one recording). @return how many. */
-    suspend fun deleteAllDrives(): Int {
+    /** Deletes every saved survey (never the one recording). @return how many. */
+    suspend fun deleteAllSurveys(): Int {
         val recording = recorder?.file
         val n = withContext(Dispatchers.IO) { store.deleteAll(except = recording) }
-        if (n > 0) log("Deleted all $n saved drives")
-        refreshDrives()
+        if (n > 0) log("Deleted all $n saved surveys")
+        refreshSurveys()
         return n
     }
 
-    fun deleteDrive(entry: DriveEntry) {
+    fun deleteSurvey(entry: SurveyEntry) {
         scope.launch {
             withContext(Dispatchers.IO) { store.delete(entry) }
-            log("Deleted wardrive \"${entry.meta.name}\"")
-            refreshDrives()
+            log("Deleted survey \"${entry.meta.name}\"")
+            refreshSurveys()
         }
     }
 
@@ -289,7 +289,7 @@ class SurveyEngine private constructor(private val app: Application) {
             lastBluetoothScanMs = now
             if (bluetooth.start()) _state.update { it.copy(bluetoothScanning = true) }
         }
-        publishWardrive()
+        publishSurvey()
     }
 
     private fun scanWifi() {
@@ -337,15 +337,15 @@ class SurveyEngine private constructor(private val app: Application) {
             try {
                 rec.record(update.observations, now)
             } catch (e: IOException) {
-                log("Wardrive write failed: ${e.message}; stopping", warning = true)
-                stopWardrive()
+                log("Survey write failed: ${e.message}; stopping", warning = true)
+                stopSurvey()
             }
         }
         liveSession?.offer(update.observations, _state.value.fix)
         tracker.expire(now)
         bluetooth.forgetBefore(now - EXPIRE_MS)
         _state.update { it.copy(devices = tracker.devices()) }
-        publishWardrive()
+        publishSurvey()
     }
 
     // --- live streaming to NetSeer -----------------------------------------------------------
@@ -359,7 +359,7 @@ class SurveyEngine private constructor(private val app: Application) {
         _state.update { it.copy(liveStream = LiveState.Connecting) }
         // onState arrives on an OkHttp thread; hop back to the engine's main-thread scope.
         liveSession = NetSeerLiveSession(link) { s -> scope.launch { onLiveState(s) } }.also { it.start() }
-        log("Streaming this wardrive live to NetSeer (${link.deviceName})")
+        log("Streaming this survey live to NetSeer (${link.deviceName})")
     }
 
     private fun onLiveState(s: LiveState) {
@@ -368,12 +368,12 @@ class SurveyEngine private constructor(private val app: Application) {
         if (s == LiveState.Error) log("Live streaming to NetSeer stopped — connection lost", warning = true)
     }
 
-    private fun publishWardrive() {
+    private fun publishSurvey() {
         val rec = recorder
         val status = rec?.let {
-            WardriveStatus(it.name, it.startedMs, it.observations, it.wifiDevices, it.bluetoothDevices, it.geotagged)
+            SurveyStatus(it.name, it.startedMs, it.observations, it.wifiDevices, it.bluetoothDevices, it.geotagged)
         }
-        if (status != _state.value.wardrive) _state.update { it.copy(wardrive = status) }
+        if (status != _state.value.survey) _state.update { it.copy(survey = status) }
     }
 
     private fun onFix(fix: GeoFix) {

@@ -25,12 +25,12 @@ object UpdateText {
             blocked || "VERIFICATION_FAILURE" in m -> InstallFailure(
                 "Google Play Protect stopped the install because it doesn't recognise WaveTop's developer yet. " +
                     "Download the APK from GitHub and open it instead; if Android warns you, tap More details → " +
-                    "Install anyway. Your drives are kept.",
+                    "Install anyway. Your surveys are kept.",
                 offerDownload = true,
             )
             "UPDATE_INCOMPATIBLE" in m || "signatures do not match" in m.lowercase() || "CONFLICT" in m -> InstallFailure(
                 "The WaveTop on this phone was signed differently (a test or older build), so Android won't " +
-                    "update it in place. Back up your drives under Your data, uninstall WaveTop, then install this version.",
+                    "update it in place. Back up your surveys under Your data, uninstall WaveTop, then install this version.",
                 offerDownload = true,
             )
             "INSUFFICIENT_STORAGE" in m || "STORAGE" in m -> InstallFailure(

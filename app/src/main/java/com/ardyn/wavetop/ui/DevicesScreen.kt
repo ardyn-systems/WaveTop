@@ -287,7 +287,7 @@ private fun WelcomeCard(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
         Spacer(Modifier.height(6.dp))
         Hint(
             "WaveTop lists the Wi-Fi networks and Bluetooth devices around you, pins them on a map, " +
-                "and records wardrives you can send to NetSeer. It uses only Android's own scanning, and " +
+                "and records surveys you can send to NetSeer. It uses only Android's own scanning, and " +
                 "nothing leaves your phone unless you send it. Tap any device for its details; themes, " +
                 "updates and NetSeer pairing are under the cog.",
         )

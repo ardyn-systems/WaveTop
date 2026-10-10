@@ -101,7 +101,7 @@ dependencies {
     // Street map: OpenStreetMap tiles, no Play services or API key.
     implementation("org.osmdroid:osmdroid-android:6.1.20")
 
-    // WebSocket for streaming a live wardrive to NetSeer. (HTTP pairing/push still uses HttpURLConnection.)
+    // WebSocket for streaming a live survey to NetSeer. (HTTP pairing/push still uses HttpURLConnection.)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     testImplementation("junit:junit:4.13.2")

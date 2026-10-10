@@ -24,7 +24,7 @@ data class Settings(
     val clock: ClockStyle = ClockStyle.Auto,
     /** Draw device names beside the strongest pins on the maps. */
     val mapLabels: Boolean = true,
-    /** Keep the screen awake while a wardrive is recording and WaveTop is open. */
+    /** Keep the screen awake while a survey is recording and WaveTop is open. */
     val keepScreenOnWhileDriving: Boolean = true,
     /** Start scanning as soon as WaveTop opens. */
     val liveOnOpen: Boolean = true,

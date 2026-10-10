@@ -28,11 +28,11 @@ class MainActivity : ComponentActivity() {
         // Ask GitHub about new versions at most once a day, if the user left that on.
         Updater.get(this).autoCheckIfDue()
 
-        // System bars follow the theme; the screen stays awake while a wardrive records (if enabled).
+        // System bars follow the theme; the screen stays awake while a survey records (if enabled).
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 combine(settings.state, SurveyEngine.get(this@MainActivity).state) { s, e ->
-                    Triple(s.theme.colors.isLight, s.keepScreenOnWhileDriving, e.wardrive != null)
+                    Triple(s.theme.colors.isLight, s.keepScreenOnWhileDriving, e.survey != null)
                 }.distinctUntilChanged().collect { (light, keepOn, driving) ->
                     applySystemBars(light)
                     if (keepOn && driving) {

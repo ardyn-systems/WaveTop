@@ -43,8 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ardyn.wavetop.drive.DriveEntry
-import com.ardyn.wavetop.engine.WardriveStatus
+import com.ardyn.wavetop.survey.SurveyEntry
+import com.ardyn.wavetop.engine.SurveyStatus
 import com.ardyn.wavetop.net.LiveState
 import com.ardyn.wavetop.model.DeviceSort
 import com.ardyn.wavetop.model.DeviceViews
@@ -53,16 +53,16 @@ import com.ardyn.wavetop.model.PhyFilter
 import com.ardyn.wavetop.prefs.Settings
 import com.ardyn.wavetop.ui.theme.Wt
 
-/** Wardrive control plus every saved drive, newest first. */
+/** Survey control plus every saved survey, newest first. */
 @Composable
-fun DrivesScreen(
-    wardrive: WardriveStatus?,
+fun SurveysScreen(
+    survey: SurveyStatus?,
     liveStream: LiveState?,
-    drives: List<DriveEntry>,
+    surveys: List<SurveyEntry>,
     settings: Settings,
     onStart: () -> Unit,
     onStop: () -> Unit,
-    onOpen: (DriveEntry) -> Unit,
+    onOpen: (SurveyEntry) -> Unit,
 ) {
     val c = Wt.colors
     LazyColumn(
@@ -71,31 +71,31 @@ fun DrivesScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item(key = "control") {
-            if (wardrive != null) {
-                ActiveDrive(wardrive, liveStream, onStop)
+            if (survey != null) {
+                ActiveSurvey(survey, liveStream, onStop)
             } else {
                 WtCard(Modifier.fillMaxWidth()) {
-                    Text("Wardrive", style = MaterialTheme.typography.titleMedium, color = c.text)
+                    Text("Survey", style = MaterialTheme.typography.titleMedium, color = c.text)
                     Spacer(Modifier.height(4.dp))
                     Hint(
                         "Records every device with the time and GPS position it was heard. It keeps going " +
                             "with the screen off and saves itself when you stop.",
                     )
                     Spacer(Modifier.height(12.dp))
-                    WtButton("Start a wardrive", onStart, Modifier.fillMaxWidth(), kind = BtnKind.Primary, icon = Icons.Outlined.FiberManualRecord)
+                    WtButton("Start a survey", onStart, Modifier.fillMaxWidth(), kind = BtnKind.Primary, icon = Icons.Outlined.FiberManualRecord)
                 }
             }
         }
-        item(key = "heading") { SectionLabel("Saved drives (${drives.size})", Modifier.padding(start = 4.dp)) }
-        if (drives.isEmpty()) {
-            item(key = "none") { Hint("Nothing saved yet. Your first wardrive will appear here.", Modifier.padding(start = 4.dp)) }
+        item(key = "heading") { SectionLabel("Saved surveys (${surveys.size})", Modifier.padding(start = 4.dp)) }
+        if (surveys.isEmpty()) {
+            item(key = "none") { Hint("Nothing saved yet. Your first survey will appear here.", Modifier.padding(start = 4.dp)) }
         }
-        items(drives, key = { it.id }) { d -> DriveRow(d, settings, onClick = { onOpen(d) }) }
+        items(surveys, key = { it.id }) { d -> SurveyRow(d, settings, onClick = { onOpen(d) }) }
     }
 }
 
 @Composable
-private fun ActiveDrive(status: WardriveStatus, liveStream: LiveState?, onStop: () -> Unit) {
+private fun ActiveSurvey(status: SurveyStatus, liveStream: LiveState?, onStop: () -> Unit) {
     val c = Wt.colors
     val shape = RoundedCornerShape(12.dp)
     val clock = rememberClock(1_000)
@@ -126,7 +126,7 @@ private fun ActiveDrive(status: WardriveStatus, liveStream: LiveState?, onStop: 
     }
 }
 
-/** A small status line under the recording card while a wardrive streams to NetSeer. */
+/** A small status line under the recording card while a survey streams to NetSeer. */
 @Composable
 private fun LiveStreamRow(state: LiveState) {
     val c = Wt.colors
@@ -134,7 +134,7 @@ private fun LiveStreamRow(state: LiveState) {
         LiveState.Live -> c.good to "Streaming live to NetSeer"
         LiveState.Connecting -> c.fair to "Connecting to NetSeer…"
         LiveState.Reconnecting -> c.fair to "Reconnecting to NetSeer…"
-        LiveState.Error -> c.weak to "Live streaming lost — the drive is still recording"
+        LiveState.Error -> c.weak to "Live streaming lost — the survey is still recording"
         LiveState.Idle, LiveState.Closed -> c.muted to "Live streaming stopped"
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -145,7 +145,7 @@ private fun LiveStreamRow(state: LiveState) {
 }
 
 @Composable
-private fun DriveRow(entry: DriveEntry, settings: Settings, onClick: () -> Unit) {
+private fun SurveyRow(entry: SurveyEntry, settings: Settings, onClick: () -> Unit) {
     val c = Wt.colors
     val m = entry.meta
     WtCard(Modifier.fillMaxWidth(), onClick = onClick) {
@@ -178,15 +178,15 @@ private fun DriveRow(entry: DriveEntry, settings: Settings, onClick: () -> Unit)
     }
 }
 
-/** One saved wardrive, replayed: its numbers, its devices, and where they were heard. */
+/** One saved survey, replayed: its numbers, its devices, and where they were heard. */
 @Composable
-fun DriveDetailScreen(
-    open: OpenDrive,
+fun SurveyDetailScreen(
+    open: OpenSurvey,
     view: ViewState,
     settings: Settings,
     nowMs: Long,
     onBack: () -> Unit,
-    onTab: (DriveTab) -> Unit,
+    onTab: (SurveyTab) -> Unit,
     onFilter: (PhyFilter) -> Unit,
     onSort: (DeviceSort) -> Unit,
     onSelect: (String) -> Unit,
@@ -198,64 +198,64 @@ fun DriveDetailScreen(
 ) {
     val c = Wt.colors
     val meta = open.entry.meta
-    val drive = open.drive
+    val survey = open.survey
     val visible = remember(open.devices, view.filter, view.sort, view.sortDescending) {
         DeviceViews.visible(open.devices, view.filter, view.sort, view.sortDescending)
     }
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.background(c.raised)) {
             Row(Modifier.fillMaxWidth().padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back to drives", tint = c.text) }
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back to surveys", tint = c.text) }
                 Column(Modifier.weight(1f)) {
                     Text(meta.name, style = MaterialTheme.typography.titleMedium, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Hint(dateTimeText(meta.startedMs, settings.clock))
                 }
-                IconButton(onClick = onSend, enabled = drive != null) { Icon(Icons.Outlined.Hub, "Send to NetSeer", tint = c.accent) }
-                IconButton(onClick = onShare, enabled = drive != null) { Icon(Icons.Outlined.Share, "Share", tint = c.muted) }
+                IconButton(onClick = onSend, enabled = survey != null) { Icon(Icons.Outlined.Hub, "Send to NetSeer", tint = c.accent) }
+                IconButton(onClick = onShare, enabled = survey != null) { Icon(Icons.Outlined.Share, "Share", tint = c.muted) }
                 IconButton(onClick = onDelete) { Icon(Icons.Outlined.Delete, "Delete", tint = c.muted) }
             }
             HorizontalDivider(color = c.line)
         }
         when {
-            open.loading -> EmptyState(Icons.Outlined.Route, "Opening the drive…", open.entry.file.name)
-            drive == null -> EmptyState(Icons.Outlined.Route, "Can't open this drive", open.error ?: "The file couldn't be read.")
+            open.loading -> EmptyState(Icons.Outlined.Route, "Opening the survey…", open.entry.file.name)
+            survey == null -> EmptyState(Icons.Outlined.Route, "Can't open this survey", open.error ?: "The file couldn't be read.")
             else -> {
                 val wifi = open.devices.count { it.phy == Phy.Wifi }
                 val bt = open.devices.size - wifi
-                val geotagged = drive.observations.count { it.fix != null }
+                val geotagged = survey.observations.count { it.fix != null }
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Stat("Duration", elapsedText(drive.durationMs) + if (meta.interrupted) "*" else "", Modifier.weight(1f))
+                    Stat("Duration", elapsedText(survey.durationMs) + if (meta.interrupted) "*" else "", Modifier.weight(1f))
                     Stat("Wi-Fi", "$wifi", Modifier.weight(1f))
                     Stat("Bluetooth", "$bt", Modifier.weight(1f))
                     Stat("Geotagged", "$geotagged", Modifier.weight(1f))
                 }
-                if (meta.interrupted) Hint("* Interrupted: the drive ended without being stopped, so this is up to its last sighting.", Modifier.padding(horizontal = 14.dp))
+                if (meta.interrupted) Hint("* Interrupted: the survey ended without being stopped, so this is up to its last sighting.", Modifier.padding(horizontal = 14.dp))
                 Toolbar {
-                    Segmented(DriveTab.entries, open.tab, { it.label }, onTab)
+                    Segmented(SurveyTab.entries, open.tab, { it.label }, onTab)
                     Spacer(Modifier.weight(1f))
-                    if (open.tab == DriveTab.Map) BasemapMenu(view.basemap, onBasemap) else SortMenu(view.sort, view.sortDescending, onSort)
+                    if (open.tab == SurveyTab.Map) BasemapMenu(view.basemap, onBasemap) else SortMenu(view.sort, view.sortDescending, onSort)
                 }
                 Toolbar { PhyFilterControl(view.filter, onFilter) }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     when (open.tab) {
-                        DriveTab.Devices -> if (visible.isEmpty()) {
-                            EmptyState(Icons.Outlined.Route, "No devices", "Nothing in this drive matches the filter.")
+                        SurveyTab.Devices -> if (visible.isEmpty()) {
+                            EmptyState(Icons.Outlined.Route, "No devices", "Nothing in this survey matches the filter.")
                         } else {
                             LazyColumn(
                                 Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(12.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
-                                // A saved drive is history: nothing is "stale", so rows aren't faded.
+                                // A saved survey is history: nothing is "stale", so rows aren't faded.
                                 items(visible, key = { it.key }) { d ->
                                     DeviceRow(d, selected = d.key == view.selectedKey, stale = false, onClick = { onSelect(d.key) })
                                 }
                             }
                         }
-                        DriveTab.Map -> Column(Modifier.fillMaxSize()) {
+                        SurveyTab.Map -> Column(Modifier.fillMaxSize()) {
                             GeoMap(
                                 devices = visible,
                                 fix = null,
@@ -270,7 +270,7 @@ fun DriveDetailScreen(
                                 timeMs = open.timeMs,
                                 modifier = Modifier.weight(1f).fillMaxWidth(),
                             )
-                            TimeBar(meta.startedMs, drive.endMs, open.timeMs, settings, onTime)
+                            TimeBar(meta.startedMs, survey.endMs, open.timeMs, settings, onTime)
                         }
                     }
                 }
@@ -291,7 +291,7 @@ private fun Stat(label: String, value: String, modifier: Modifier) {
     }
 }
 
-/** NetSeer's `.geo-timebar`: scrub through the drive; the map shows only what was heard by then. */
+/** NetSeer's `.geo-timebar`: scrub through the survey; the map shows only what was heard by then. */
 @Composable
 private fun TimeBar(startMs: Long, endMs: Long, timeMs: Long?, settings: Settings, onTime: (Long?) -> Unit) {
     val c = Wt.colors

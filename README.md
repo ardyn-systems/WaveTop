@@ -7,14 +7,14 @@
 **See what's on the air.**
 
 WaveTop is an Android app that surveys the Wi-Fi networks and Bluetooth devices around you, pins them
-on a map where they're heard loudest, and records **wardrives** you can share or send straight to
+on a map where they're heard loudest, and records **surveys** you can share or send straight to
 [NetSeer](https://github.com/ardyn-systems/NetSeer) to map them. It uses only Android's own scanning
 APIs: no root, no monitor mode, no Google Play services. Nothing leaves your phone unless you send it.
 
 <p align="center">
   <img src="docs/images/devices.png" alt="Devices" width="200" />
   <img src="docs/images/map-street.png" alt="Street map" width="200" />
-  <img src="docs/images/drive-map.png" alt="A saved wardrive" width="200" />
+  <img src="docs/images/survey-map.png" alt="A saved survey" width="200" />
   <img src="docs/images/settings-general.png" alt="Settings" width="200" />
 </p>
 
@@ -27,15 +27,15 @@ APIs: no root, no monitor mode, no Google Play services. Nothing leaves your pho
   and a card for whatever you tap (a cluster opens a list to pick from). Or the **radar**: distance
   from the centre is signal strength.
 - **Channels** — access points per channel on 2.4, 5 and 6 GHz, to spot crowded channels.
-- **Drives** — record a wardrive: every sighting with its time and GPS position. It keeps going with
+- **Surveys** — record a survey: every sighting with its time and GPS position. It keeps going with
   the screen off, saves itself when you stop, and opens later with its devices, its route on the map,
   and a time slider to replay it.
-- **Send to NetSeer** — pair once, then push any drive to NetSeer with one tap (Wi-Fi and Bluetooth,
-  with positions). Or share a drive as WiGLE CSV, Kismet netxml, or the raw recording.
-- **Live to NetSeer** — turn on **Stream live to NetSeer** when you start a drive and NetSeer builds
-  the map as you go, access points appearing as you pass them. The drive is still saved, so you can
+- **Send to NetSeer** — pair once, then push any survey to NetSeer with one tap (Wi-Fi and Bluetooth,
+  with positions). Or share a survey as WiGLE CSV, Kismet netxml, or the raw recording.
+- **Live to NetSeer** — turn on **Stream live to NetSeer** when you start a survey and NetSeer builds
+  the map as you go, access points appearing as you pass them. The survey is still saved, so you can
   send the full recording (Bluetooth included) afterwards too.
-- **Log** — what WaveTop noticed: new devices, radios switching, scan throttling, drives.
+- **Log** — what WaveTop noticed: new devices, radios switching, scan throttling, surveys.
 - **Settings** — the **WaveTop** theme in the logo's cyan and orange (the default), plus three shared with
   NetSeer (**Terrain**, **Blueprint**, **Daylight**), 12/24-hour
   time, map labels, NetSeer pairing, backups, in-app updates, help, and about.
@@ -59,22 +59,22 @@ Updates offers the APK to download and install from the browser instead.
 
 | Permission | Why |
 | --- | --- |
-| Location (precise) | Android only gives apps Wi-Fi and Bluetooth scan results with location access, and it geotags drives. |
+| Location (precise) | Android only gives apps Wi-Fi and Bluetooth scan results with location access, and it geotags surveys. |
 | Nearby devices / Bluetooth scan | Listing Wi-Fi networks (Android 13+) and Bluetooth devices. |
-| Notifications | The notification that keeps a wardrive running with the screen off (optional). |
+| Notifications | The notification that keeps a survey running with the screen off (optional). |
 | Install apps | Only when you tap **Update** in Settings → Updates; Android asks the first time. |
-| Internet | Map tiles, update checks, and sending drives to NetSeer — nothing else. |
+| Internet | Map tiles, update checks, and sending surveys to NetSeer — nothing else. |
 
 ## Updates
 
 **Settings → Updates** works like NetSeer's and NineLives': **Check** lists the releases on GitHub,
 **Update** downloads the APK, checks it against the release's `SHA256SUMS.txt`, and hands it to Android
-to install (your drives stay). With **Check when WaveTop opens** on, WaveTop asks GitHub at most once a
+to install (your surveys stay). With **Check when WaveTop opens** on, WaveTop asks GitHub at most once a
 day and puts a dot on the settings cog when a new version is out. Android can't install an older
-version over a newer one, so rolling back means uninstalling first — back up your drives under
+version over a newer one, so rolling back means uninstalling first — back up your surveys under
 **Settings → Your data**.
 
-## Sending drives to NetSeer
+## Sending surveys to NetSeer
 
 In NetSeer: **Settings → Integrations → Pair a device** shows a six-digit code. In WaveTop:
 **Settings → NetSeer**, choose how to reach it, type the code, **Pair**.
@@ -87,7 +87,7 @@ In NetSeer: **Settings → Integrations → Pair a device** shows a six-digit co
 - **Wi-Fi / network** — turn on **Allow devices on my network** in NetSeer's Integrations and type the
   address it shows.
 
-Then open any drive and tap the NetSeer button. NetSeer opens the map by itself.
+Then open any survey and tap the NetSeer button. NetSeer opens the map by itself.
 
 ## Build from source
 
