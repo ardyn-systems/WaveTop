@@ -51,6 +51,9 @@ data class WtColors(
     val good: Color,
     val fair: Color,
     val weak: Color,
+    /** The wordmark's two colours ("WAVE" cyan, "TOP" orange); only the WaveTop theme sets them. */
+    val brandWave: Color? = null,
+    val brandTop: Color? = null,
 )
 
 /**
@@ -88,6 +91,7 @@ private val WaveTopColors = WtColors(
     canvas = Color(0xFF090C11), select = Color(0xFF5BE3FF),
     nodeAp = Color(0xFFFF8A3D), nodeBluetooth = Color(0xFF2EC5FF), nodeWireless = Color(0xFFFFB15C),
     good = Color(0xFF4FE0B0), fair = Color(0xFFFFB347), weak = Color(0xFFFF5A4F),
+    brandWave = Color(0xFF5BDFFF), brandTop = Color(0xFFFF6A26),
 )
 
 private val TerrainColors = WtColors(

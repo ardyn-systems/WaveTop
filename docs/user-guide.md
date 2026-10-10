@@ -158,7 +158,7 @@ The cog opens Settings. Pick a section; the back arrow returns to the list.
 
 <img src="images/settings-general.png" alt="Settings → General" width="300" />
 
-- **Theme** — **WaveTop** (the logo's cyan and orange on black; the default), **Terrain** (warm amber
+- **Theme** — **WaveTop** (the logo's cyan and orange on black, down to the two-colour title; the default), **Terrain** (warm amber
   on dark earth), **Blueprint** (white lines on drafting blue) or **Daylight** (light, for bright sun).
   The last three are the same as NetSeer's.
 - **Time** — like this phone, 24-hour, or 12-hour.
