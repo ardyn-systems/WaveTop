@@ -17,6 +17,7 @@ import com.ardyn.wavetop.model.TrackedDevice
 import com.ardyn.wavetop.model.WifiBand
 import com.ardyn.wavetop.net.NetSeerAddress
 import com.ardyn.wavetop.net.NetSeerClient
+import com.ardyn.wavetop.net.QrPairing
 import com.ardyn.wavetop.prefs.AppSettings
 import com.ardyn.wavetop.prefs.NetSeerRoute
 import com.ardyn.wavetop.prefs.Settings
@@ -323,6 +324,34 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     setNetSeerTask(TaskStatus.Done("Paired. Surveys can now go straight to NetSeer."))
                 }
                 .onFailure { setNetSeerTask(TaskStatus.Failed(it.message ?: "Pairing failed")) }
+        }
+    }
+
+    /**
+     * Pairs from a scanned NetSeer QR: tries each address it carries (remote/Tailscale first, then
+     * LAN), uses the first that answers, and pairs with the code baked into the QR — no typing.
+     */
+    fun pairFromQr(raw: String) {
+        val payload = QrPairing.parse(raw)
+            ?: return setNetSeerTask(TaskStatus.Failed("That isn't a NetSeer pairing QR. In NetSeer: Settings → Integrations → Pair a device."))
+        runNetSeer("Pairing with ${payload.name ?: "NetSeer"}…") {
+            var lastError: String? = null
+            for (host in payload.hosts) {
+                val url = NetSeerAddress.normalize(host) ?: continue
+                if (NetSeerClient.info(url).isFailure) {
+                    lastError = "Couldn't reach NetSeer at $host."
+                    continue
+                }
+                NetSeerClient.pair(url, payload.code, deviceName())
+                    .onSuccess { link ->
+                        appSettings.update { it.copy(netSeer = link, netSeerRoute = NetSeerRoute.Network, netSeerHost = host) }
+                        engine.log("Paired with NetSeer at $url (QR)")
+                        setNetSeerTask(TaskStatus.Done("Paired with ${payload.name ?: "NetSeer"}. Surveys can now go straight to NetSeer."))
+                    }
+                    .onFailure { setNetSeerTask(TaskStatus.Failed(it.message ?: "Pairing failed")) }
+                return@runNetSeer
+            }
+            setNetSeerTask(TaskStatus.Failed(lastError ?: "Couldn't reach NetSeer at the scanned address."))
         }
     }
 

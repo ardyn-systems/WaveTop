@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.material.icons.outlined.QrCodeScanner
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -389,7 +393,32 @@ private fun NetSeerPane(vm: AppViewModel, view: ViewState, settings: Settings) {
     WtButton("Test connection", vm::testNetSeer)
 
     SectionLabel("2 · Pair")
-    Hint("In NetSeer: Settings → Integrations → Pair a device. Type the code it shows (it lasts five minutes).")
+    Hint("In NetSeer: Settings → Integrations → Pair a device. Scan the QR it shows, or type the code (it lasts five minutes).")
+    Spacer(Modifier.height(10.dp))
+    // Scan the QR NetSeer shows — it carries the address and the code, so there's nothing to type.
+    // The scanner (ZXing) asks for the camera itself the first time.
+    val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        result.contents?.let { vm.pairFromQr(it) }
+    }
+    WtButton(
+        "Scan QR code",
+        {
+            scanLauncher.launch(
+                ScanOptions().apply {
+                    setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                    setPrompt("Point at NetSeer's pairing QR")
+                    setBeepEnabled(false)
+                    setOrientationLocked(false)
+                },
+            )
+        },
+        Modifier.fillMaxWidth(),
+        kind = BtnKind.Primary,
+        icon = Icons.Outlined.QrCodeScanner,
+        enabled = view.netSeerTask !is TaskStatus.Working,
+    )
+    Spacer(Modifier.height(14.dp))
+    Hint("Or type the code:")
     Spacer(Modifier.height(8.dp))
     // Keep the code field and the Pair button above the keyboard together, not just the field.
     val pairRow = remember { BringIntoViewRequester() }
@@ -408,7 +437,7 @@ private fun NetSeerPane(vm: AppViewModel, view: ViewState, settings: Settings) {
             onDone = { vm.pairNetSeer(code) },
         )
         Spacer(Modifier.height(10.dp))
-        WtButton("Pair", { vm.pairNetSeer(code) }, kind = BtnKind.Primary, enabled = view.netSeerTask !is TaskStatus.Working)
+        WtButton("Pair", { vm.pairNetSeer(code) }, kind = BtnKind.Default, enabled = view.netSeerTask !is TaskStatus.Working)
         StatusLine(view.netSeerTask)
     }
 }

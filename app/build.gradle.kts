@@ -104,6 +104,9 @@ dependencies {
     // WebSocket for streaming a live survey to NetSeer. (HTTP pairing/push still uses HttpURLConnection.)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // QR scanner for NetSeer pairing — ZXing (no Google Play services), matching the rest of the app.
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+
     testImplementation("junit:junit:4.13.2")
     // The real org.json so JSON-building code (e.g. the live-stream serializer) runs under unit tests,
     // instead of the android.jar stub that throws "not mocked".
