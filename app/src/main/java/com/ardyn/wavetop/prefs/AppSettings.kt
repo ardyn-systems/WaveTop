@@ -20,7 +20,7 @@ enum class NetSeerRoute(val id: String) { Usb("usb"), Network("network") }
 data class NetSeerLink(val baseUrl: String, val token: String, val deviceName: String, val pairedAtMs: Long)
 
 data class Settings(
-    val theme: AppTheme = AppTheme.Terrain,
+    val theme: AppTheme = AppTheme.WaveTop,
     val clock: ClockStyle = ClockStyle.Auto,
     /** Draw device names beside the strongest pins on the maps. */
     val mapLabels: Boolean = true,

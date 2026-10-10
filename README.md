@@ -33,7 +33,8 @@ APIs: no root, no monitor mode, no Google Play services. Nothing leaves your pho
 - **Send to NetSeer** — pair once, then push any drive to NetSeer with one tap (Wi-Fi and Bluetooth,
   with positions). Or share a drive as WiGLE CSV, Kismet netxml, or the raw recording.
 - **Log** — what WaveTop noticed: new devices, radios switching, scan throttling, drives.
-- **Settings** — three themes shared with NetSeer (**Terrain**, **Blueprint**, **Daylight**), 12/24-hour
+- **Settings** — the **WaveTop** theme in the logo's cyan and orange (the default), plus three shared with
+  NetSeer (**Terrain**, **Blueprint**, **Daylight**), 12/24-hour
   time, map labels, NetSeer pairing, backups, in-app updates, help, and about.
 
 The [user guide](docs/user-guide.md) walks through every screen with screenshots.

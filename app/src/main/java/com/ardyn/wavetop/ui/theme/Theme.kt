@@ -53,22 +53,42 @@ data class WtColors(
     val weak: Color,
 )
 
-/** The stock themes, shared with NetSeer. Terrain is the default, as it is there. */
+/**
+ * WaveTop's own theme (the logo's colours, and the default) plus the three stock themes shared with
+ * NetSeer.
+ */
 enum class AppTheme(val id: String, val label: String, val blurb: String) {
+    WaveTop("wavetop", "WaveTop", "The logo's cyan and orange on black"),
     Terrain("terrain", "Terrain", "Warm amber on dark earth"),
     Blueprint("blueprint", "Blueprint", "White lines on drafting blue"),
     Daylight("daylight", "Daylight", "Light, for bright sun and print");
 
     val colors: WtColors get() = when (this) {
+        WaveTop -> WaveTopColors
         Terrain -> TerrainColors
         Blueprint -> BlueprintColors
         Daylight -> DaylightColors
     }
 
     companion object {
-        fun fromId(id: String?): AppTheme = entries.firstOrNull { it.id == id } ?: Terrain
+        fun fromId(id: String?): AppTheme = entries.firstOrNull { it.id == id } ?: WaveTop
     }
 }
+
+// From the logo: near-black, the cyan of "WAVE" and the orange of "TOP". Orange is the one thing to
+// press; access points take the orange side and Bluetooth the cyan side, as in the mark.
+private val WaveTopColors = WtColors(
+    isLight = false,
+    bg = Color(0xFF07090D), panel = Color(0xFF0C1016), raised = Color(0xFF121821), hover = Color(0xFF19212C),
+    line = Color(0xFF1E2833), lineStrong = Color(0xFF2E3C4C),
+    text = Color(0xFFEAF6FF), muted = Color(0xFF9DB2C5), faint = Color(0xFF6B7F92),
+    accent = Color(0xFFFF7A2F), accentHover = Color(0xFFFF9350), onAccent = Color(0xFF1C0A00),
+    accentSoft = Color(0x26FF7A2F),
+    danger = Color(0xFFFF4F5E), dangerSoft = Color(0x26FF4F5E),
+    canvas = Color(0xFF090C11), select = Color(0xFF5BE3FF),
+    nodeAp = Color(0xFFFF8A3D), nodeBluetooth = Color(0xFF2EC5FF), nodeWireless = Color(0xFFFFB15C),
+    good = Color(0xFF4FE0B0), fair = Color(0xFFFFB347), weak = Color(0xFFFF5A4F),
+)
 
 private val TerrainColors = WtColors(
     isLight = false,
@@ -109,7 +129,7 @@ private val DaylightColors = WtColors(
     good = Color(0xFF0D9488), fair = Color(0xFFD97706), weak = Color(0xFFDC2626),
 )
 
-val LocalWt = staticCompositionLocalOf { TerrainColors }
+val LocalWt = staticCompositionLocalOf { WaveTopColors }
 
 /** Shorthand: `Wt.colors.accent`. */
 object Wt {

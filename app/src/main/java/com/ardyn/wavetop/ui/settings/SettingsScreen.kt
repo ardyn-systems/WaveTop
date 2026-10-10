@@ -260,9 +260,11 @@ private fun GeneralPane(vm: AppViewModel, settings: Settings) {
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // .theme-swatch: the theme's own colours side by side.
+                // .theme-swatch: the theme's own colours side by side. WaveTop's shows the logo's
+                // cyan beside its orange; its raised grey would hide the cyan entirely.
+                val second = if (theme == AppTheme.WaveTop) t.nodeBluetooth else t.raised
                 Row(Modifier.size(width = 56.dp, height = 32.dp).clip(RoundedCornerShape(6.dp)).border(1.dp, c.lineStrong, RoundedCornerShape(6.dp))) {
-                    listOf(t.bg, t.raised, t.accent, t.text).forEach { Box(Modifier.weight(1f).fillMaxHeight().background(it)) }
+                    listOf(t.bg, second, t.accent, t.text).forEach { Box(Modifier.weight(1f).fillMaxHeight().background(it)) }
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
