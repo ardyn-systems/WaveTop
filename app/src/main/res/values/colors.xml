@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Terrain, the default theme; only used before Compose draws (splash, window background). -->
-    <color name="wt_bg">#FF15140F</color>
-    <color name="wt_panel">#FF1C1A14</color>
-    <color name="wt_accent">#FFE0A84A</color>
-    <color name="wt_on_accent">#FF2A1D05</color>
+    <!-- WaveTop, the default theme; only used before Compose draws (splash, window background). -->
+    <color name="wt_bg">#FF07090D</color>
+    <color name="wt_panel">#FF0C1016</color>
+    <color name="wt_accent">#FFFF7A2F</color>
+    <color name="wt_on_accent">#FF1C0A00</color>
     <!-- The logo sits on pure black; splash and launcher background match it. -->
     <color name="wt_logo_bg">#FF000000</color>
 </resources>

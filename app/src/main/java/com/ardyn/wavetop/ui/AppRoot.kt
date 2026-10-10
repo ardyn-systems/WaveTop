@@ -65,7 +65,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -365,7 +369,7 @@ private fun TopBar(
             )
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("WaveTop", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = c.text)
+                BrandTitle()
                 val scanning = buildList {
                     if (engine.wifiScanning) add("Wi-Fi")
                     if (engine.bluetoothScanning) add("Bluetooth")
@@ -552,3 +556,22 @@ fun shareFile(context: Context, file: File, mime: String) {
     }
 }
 
+/** "WaveTop" in the top bar: on the WaveTop theme, "Wave" in the logo's cyan and "Top" in its orange. */
+@Composable
+private fun BrandTitle() {
+    val c = Wt.colors
+    val wave = c.brandWave
+    val top = c.brandTop
+    val style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 16.sp)
+    if (wave == null || top == null) {
+        Text("WaveTop", style = style, color = c.text)
+    } else {
+        Text(
+            buildAnnotatedString {
+                withStyle(SpanStyle(color = wave)) { append("Wave") }
+                withStyle(SpanStyle(color = top)) { append("Top") }
+            },
+            style = style,
+        )
+    }
+}

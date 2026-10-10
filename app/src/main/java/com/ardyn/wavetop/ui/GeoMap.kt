@@ -408,10 +408,13 @@ private fun boundsOf(points: List<GeoPoint>): BoundingBox {
 private fun styleTiles(map: MapView, c: WtColors, basemap: Basemap) {
     val tiles = map.overlayManager.tilesOverlay
     map.setBackgroundColor(c.canvas.toArgb())
-    tiles.loadingBackgroundColor = c.canvas.toArgb()
-    tiles.loadingLineColor = c.line.toArgb()
+    val filter = tileFilter(c)
+    // The filter also recolours the "still loading" squares; on dark themes it inverts them, so draw
+    // them white to land on the theme's background instead of showing as light grey patches.
+    tiles.loadingBackgroundColor = if (filter != null) android.graphics.Color.WHITE else c.canvas.toArgb()
+    tiles.loadingLineColor = if (filter != null) android.graphics.Color.WHITE else c.line.toArgb()
     tiles.isEnabled = basemap == Basemap.Streets
-    tiles.setColorFilter(tileFilter(c))
+    tiles.setColorFilter(filter)
 }
 
 private val filterCache = HashMap<WtColors, ColorMatrixColorFilter?>()
