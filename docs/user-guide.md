@@ -152,8 +152,9 @@ Pair once (**Settings → NetSeer**):
    camera at NetSeer's screen and you're paired — the QR carries NetSeer's address *and* the code, so
    there's nothing to type and it works over Wi-Fi or a private network like Tailscale (WaveTop
    tries each address in the QR and uses the first that answers). WaveTop asks for the camera the first
-   time. Or, instead of scanning, pick **How to reach NetSeer** above and type the six-digit code under
-   **Or type the code**, then tap **Pair**.
+   time. Can't scan? Open **Pair another way**: choose **USB cable** (plug in, NetSeer links the phone
+   and shows a code) or **Wi-Fi / network** (type NetSeer's address), then enter the six-digit code and
+   tap **Pair**.
 
 Then open any survey and tap the NetSeer button → **Send**. NetSeer reads it and opens the map on its
 own, with each device placed from its GPS sightings. **Unpair** forgets NetSeer on the phone; remove the
