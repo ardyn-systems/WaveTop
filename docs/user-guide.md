@@ -8,7 +8,7 @@ under Settings → General.
 - [Device details](#device-details)
 - [Map](#map) — street map and radar
 - [Channels](#channels)
-- [Drives](#drives) — wardriving, replaying, sharing
+- [Surveys](#surveys) — surveying, replaying, sharing
 - [Sending to NetSeer](#sending-to-netseer)
 - [Log](#log)
 - [Settings](#settings)
@@ -20,11 +20,11 @@ three controls:
 
 - **Live / Paused** — live scanning on or off. Live, WaveTop scans Wi-Fi about every 35 seconds (the
   fastest Android allows without refusing scans) and Bluetooth in 12-second windows.
-- **Drive** — start a wardrive from any screen. While recording it turns red and shows the elapsed
+- **Survey** — start a survey from any screen. While recording it turns red and shows the elapsed
   time; tap it to stop.
 - **Cog** — Settings. A dot on it means a new version is out (see [Updates](#updates)).
 
-WaveTop only scans while it's on screen, unless a wardrive is recording.
+WaveTop only scans while it's on screen, unless a survey is recording.
 
 ## Devices
 
@@ -82,37 +82,37 @@ direction a signal comes from, so each device just keeps a fixed angle. Tap a do
 How many access points sit on each channel of the 2.4, 5 or 6 GHz band, coloured by the strongest one
 heard there. Pick the band at the top. Crowded channels are the ones to avoid for your own network.
 
-## Drives
+## Surveys
 
-<img src="images/drives.png" alt="Drives" width="300" />
+<img src="images/surveys.png" alt="Surveys" width="300" />
 
-A **wardrive** records every sighting with its time and GPS position.
+A **survey** records every sighting with its time and GPS position.
 
-1. Tap **Start a wardrive** (or **Drive** in the top bar) and give it a name. If you've paired with
+1. Tap **Start a survey** (or **Survey** in the top bar) and give it a name. If you've paired with
    NetSeer, you can also turn on **Stream live to NetSeer** here (see below).
 2. Walk or drive. WaveTop keeps recording with the screen off and shows a notification with the time
    and counts, with **Stop & save**. (Some phones pause Bluetooth LE scanning while the screen is off;
    Settings → General can keep the screen on while driving.)
-3. Tap **Stop and save**. The drive is saved under its name and listed below.
+3. Tap **Stop and save**. The survey is saved under its name and listed below.
 
-If a drive ends without being stopped (the phone died), it's still saved up to its last sighting and
+If a survey ends without being stopped (the phone died), it's still saved up to its last sighting and
 marked **Interrupted**.
 
-<img src="images/drive-streaming.png" alt="A drive streaming live to NetSeer" width="300" />
+<img src="images/survey-streaming.png" alt="A survey streaming live to NetSeer" width="300" />
 
-**Stream live to NetSeer.** With the switch on when you start a drive, WaveTop opens a live session on
+**Stream live to NetSeer.** With the switch on when you start a survey, WaveTop opens a live session on
 your paired NetSeer and sends each Wi-Fi access point as it's heard, so NetSeer's map fills in while you
 move. The recording card shows a green **Streaming live to NetSeer** line; if the connection drops it
-reconnects on its own and the drive keeps recording regardless. Live streaming covers Wi-Fi; the saved
-drive still holds Bluetooth, so you can send the whole thing with the NetSeer button afterwards. Over
+reconnects on its own and the survey keeps recording regardless. Live streaming covers Wi-Fi; the saved
+survey still holds Bluetooth, so you can send the whole thing with the NetSeer button afterwards. Over
 the internet, point WaveTop at NetSeer's address on a private network such as Tailscale — the stream
 rides the same encrypted link as everything else.
 
-<img src="images/drive-detail.png" alt="A saved drive" width="300" /> <img src="images/drive-map.png" alt="A drive on the map" width="300" />
+<img src="images/survey-detail.png" alt="A saved survey" width="300" /> <img src="images/survey-map.png" alt="A survey on the map" width="300" />
 
-Open a saved drive to see how long it ran, how many Wi-Fi and Bluetooth devices it found, and how many
+Open a saved survey to see how long it ran, how many Wi-Fi and Bluetooth devices it found, and how many
 sightings are geotagged. **Devices** lists them; **Map** draws the route you took and pins every device,
-and the **time slider** underneath replays the drive — slide it back to see what had been heard by then.
+and the **time slider** underneath replays the survey — slide it back to see what had been heard by then.
 
 The buttons at the top **send it to NetSeer**, **share** it, or **delete** it. Share offers:
 
@@ -124,7 +124,7 @@ The buttons at the top **send it to NetSeer**, **share** it, or **delete** it. S
 
 ## Sending to NetSeer
 
-<img src="images/settings-netseer.png" alt="Settings → NetSeer" width="300" /> <img src="images/send-to-netseer.png" alt="Sending a drive" width="300" />
+<img src="images/settings-netseer.png" alt="Settings → NetSeer" width="300" /> <img src="images/send-to-netseer.png" alt="Sending a survey" width="300" />
 
 Pair once (**Settings → NetSeer**):
 
@@ -150,14 +150,14 @@ Pair once (**Settings → NetSeer**):
 2. **Pair** — in NetSeer, **Settings → Integrations → Pair a device** shows a six-digit code (good for
    five minutes). Type it and tap **Pair**.
 
-Then open any drive and tap the NetSeer button → **Send**. NetSeer reads it and opens the map on its
+Then open any survey and tap the NetSeer button → **Send**. NetSeer reads it and opens the map on its
 own, with each device placed from its GPS sightings. **Unpair** forgets NetSeer on the phone; remove the
 phone in NetSeer's Integrations to revoke it there too.
 
 ## Log
 
 Everything WaveTop noticed, newest first: new devices, Wi-Fi or Bluetooth switching off, Android
-limiting scans, the first GPS fix, drives starting and saving, sends to NetSeer.
+limiting scans, the first GPS fix, surveys starting and saving, sends to NetSeer.
 
 ## Settings
 
@@ -174,7 +174,7 @@ The cog opens Settings. Pick a section; the back arrow returns to the list.
   The last three are the same as NetSeer's.
 - **Time** — like this phone, 24-hour, or 12-hour.
 - **Map** — name the strongest devices on the maps.
-- **Scanning** — start scanning when WaveTop opens; keep the screen on while a wardrive records.
+- **Scanning** — start scanning when WaveTop opens; keep the screen on while a survey records.
 
 ### NetSeer
 
@@ -182,8 +182,8 @@ See [Sending to NetSeer](#sending-to-netseer).
 
 ### Your data
 
-How many drives are saved and how much space they take. **Back up all drives** shares a `.zip` of
-every drive (keep it before uninstalling or changing phones). **Delete all drives** and **Reset
+How many surveys are saved and how much space they take. **Back up all surveys** shares a `.zip` of
+every survey (keep it before uninstalling or changing phones). **Delete all surveys** and **Reset
 settings** start over; neither can be undone.
 
 ### Updates
@@ -193,7 +193,7 @@ settings** start over; neither can be undone.
 The card shows the installed version; **Check** asks GitHub for the list of releases.
 
 - **Update** (on a newer release) downloads it, checks it against the release's checksum, and hands it
-  to Android to install. The first time, Android asks you to allow WaveTop to install apps. Your drives
+  to Android to install. The first time, Android asks you to allow WaveTop to install apps. Your surveys
   are kept, and a notification says when the new version is ready.
 - **Reinstall** puts the current version back on.
 - **Check when WaveTop opens** asks GitHub at most once a day; when something new is out, a dot appears
@@ -202,10 +202,10 @@ The card shows the installed version; **Check** asks GitHub for the list of rele
 If Android refuses an update, WaveTop says why in plain words. The usual one is **Google Play
 Protect** not recognising WaveTop's developer yet (WaveTop isn't on the Play Store); WaveTop then offers
 **Download WaveTop … from GitHub** so you can install it from the browser, choosing **More details →
-Install anyway** if Android warns. Your drives are kept either way.
+Install anyway** if Android warns. Your surveys are kept either way.
 
 Android can't install an older version over a newer one, so going back means uninstalling first —
-back up your drives under Your data before you do.
+back up your surveys under Your data before you do.
 
 ### Help and About
 

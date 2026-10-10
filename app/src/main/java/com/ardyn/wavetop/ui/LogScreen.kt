@@ -22,12 +22,12 @@ import com.ardyn.wavetop.prefs.Settings
 import com.ardyn.wavetop.ui.theme.MonoStyle
 import com.ardyn.wavetop.ui.theme.Wt
 
-/** What WaveTop has noticed, newest first: new devices, radio changes, drives, problems. */
+/** What WaveTop has noticed, newest first: new devices, radio changes, surveys, problems. */
 @Composable
 fun LogScreen(messages: List<SurveyMessage>, settings: Settings) {
     val c = Wt.colors
     if (messages.isEmpty()) {
-        EmptyState(Icons.Outlined.Notes, "Nothing logged yet", "New devices, radio changes, wardrives and scan problems are listed here.")
+        EmptyState(Icons.Outlined.Notes, "Nothing logged yet", "New devices, radio changes, surveys and scan problems are listed here.")
     } else {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 6.dp)) {
             items(messages) { msg ->

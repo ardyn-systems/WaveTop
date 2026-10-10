@@ -29,7 +29,7 @@ enum class LiveState { Idle, Connecting, Live, Reconnecting, Error, Closed }
 /**
  * Turns WaveTop's [Observation]s into NetSeer's "observation delta" messages (NetSeer
  * `docs/integration-api.md`). The live schema is Wi-Fi/wireless-centric, so only Wi-Fi access points
- * are streamed; Bluetooth still rides along in the saved drive and the end-of-drive file push.
+ * are streamed; Bluetooth still rides along in the saved survey and the end-of-survey file push.
  */
 object LiveSerializer {
     private val iso: SimpleDateFormat
@@ -90,7 +90,7 @@ object LiveSerializer {
 }
 
 /**
- * Streams one wardrive to NetSeer over a WebSocket: opens a live session with the paired token, sends
+ * Streams one survey to NetSeer over a WebSocket: opens a live session with the paired token, sends
  * observation deltas as they come, and closes the session at the end (NetSeer live-view API).
  *
  * Send-only — NetSeer merges each delta into its own map and never messages back. A dropped socket

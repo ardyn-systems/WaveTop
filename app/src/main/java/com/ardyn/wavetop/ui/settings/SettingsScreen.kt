@@ -200,8 +200,8 @@ private fun paneIcon(p: SettingsPane): ImageVector = when (p) {
 
 private fun paneBlurb(p: SettingsPane) = when (p) {
     SettingsPane.General -> "Theme, time, map and scanning"
-    SettingsPane.NetSeer -> "Pair with NetSeer and send drives to it"
-    SettingsPane.Data -> "Back up or clear your drives"
+    SettingsPane.NetSeer -> "Pair with NetSeer and send surveys to it"
+    SettingsPane.Data -> "Back up or clear your surveys"
     SettingsPane.Updates -> "Check for, install or reinstall versions"
     SettingsPane.Help -> "User guide and reporting a problem"
     SettingsPane.About -> "Version, source and credits"
@@ -298,7 +298,7 @@ private fun GeneralPane(vm: AppViewModel, settings: Settings) {
     Spacer(Modifier.height(8.dp))
     SwitchRow(
         "Keep the screen on while driving",
-        "While a wardrive records and WaveTop is open. Bluetooth LE scanning pauses on some phones when the screen is off.",
+        "While a survey records and WaveTop is open. Bluetooth LE scanning pauses on some phones when the screen is off.",
         settings.keepScreenOnWhileDriving,
         { on -> vm.updateSettings { it.copy(keepScreenOnWhileDriving = on) } },
     )
@@ -312,7 +312,7 @@ private fun NetSeerPane(vm: AppViewModel, view: ViewState, settings: Settings) {
     val c = Wt.colors
     var code by rememberSaveable { mutableStateOf("") }
     Hint(
-        "Pair WaveTop with NetSeer once, then send any drive to it with one tap: NetSeer maps the Wi-Fi " +
+        "Pair WaveTop with NetSeer once, then send any survey to it with one tap: NetSeer maps the Wi-Fi " +
             "and Bluetooth it heard and estimates where each device is. Pairing uses a code NetSeer shows; " +
             "you can remove this phone from NetSeer at any time.",
         Modifier.padding(top = 12.dp),
@@ -331,7 +331,7 @@ private fun NetSeerPane(vm: AppViewModel, view: ViewState, settings: Settings) {
             }
         }
         StatusLine(view.netSeerTask)
-        Hint("To send a drive: Drives → open a drive → the NetSeer button.", Modifier.padding(top = 10.dp))
+        Hint("To send a survey: Surveys → open a survey → the NetSeer button.", Modifier.padding(top = 10.dp))
         return
     }
 
@@ -419,41 +419,41 @@ private fun NetSeerPane(vm: AppViewModel, view: ViewState, settings: Settings) {
 private fun DataPane(vm: AppViewModel, view: ViewState, engine: EngineState, onShareFile: (File, String) -> Unit) {
     val scope = rememberCoroutineScope()
     var confirm by remember { mutableStateOf<String?>(null) }
-    val size = engine.drives.sumOf { it.sizeBytes }
+    val size = engine.surveys.sumOf { it.sizeBytes }
     SectionLabel("Saved on this phone")
     Hint(
-        "${engine.drives.size} saved drive${if (engine.drives.size == 1) "" else "s"} · ${"%.1f".format(size / 1_048_576.0)} MB. " +
-            "Drives stay on this phone only. Back them up before uninstalling WaveTop or moving to another phone.",
+        "${engine.surveys.size} saved survey${if (engine.surveys.size == 1) "" else "s"} · ${"%.1f".format(size / 1_048_576.0)} MB. " +
+            "Surveys stay on this phone only. Back them up before uninstalling WaveTop or moving to another phone.",
     )
     Spacer(Modifier.height(10.dp))
-    WtButton("Back up all drives (.zip)", {
-        scope.launch { vm.exportAllDrives()?.let { onShareFile(it, "application/zip") } }
-    }, enabled = engine.drives.isNotEmpty())
+    WtButton("Back up all surveys (.zip)", {
+        scope.launch { vm.exportAllSurveys()?.let { onShareFile(it, "application/zip") } }
+    }, enabled = engine.surveys.isNotEmpty())
 
     SectionLabel("Start over")
-    Hint("Deleting drives can't be undone. Resetting settings keeps your drives and unpairs NetSeer.")
+    Hint("Deleting surveys can't be undone. Resetting settings keeps your surveys and unpairs NetSeer.")
     Spacer(Modifier.height(10.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        WtButton("Delete all drives…", { confirm = "drives" }, kind = BtnKind.Danger, enabled = engine.drives.isNotEmpty())
+        WtButton("Delete all surveys…", { confirm = "surveys" }, kind = BtnKind.Danger, enabled = engine.surveys.isNotEmpty())
         WtButton("Reset settings…", { confirm = "settings" })
     }
     StatusLine(view.dataTask)
 
     when (confirm) {
-        "drives" -> ConfirmDialog(
-            title = "Delete every drive?",
-            body = "All ${engine.drives.size} saved drives will be removed from this phone. Back them up first if you might want them.",
+        "surveys" -> ConfirmDialog(
+            title = "Delete every survey?",
+            body = "All ${engine.surveys.size} saved surveys will be removed from this phone. Back them up first if you might want them.",
             confirm = "Delete all",
             danger = true,
             onConfirm = {
                 confirm = null
-                vm.deleteAllDrives()
+                vm.deleteAllSurveys()
             },
             onDismiss = { confirm = null },
         )
         "settings" -> ConfirmDialog(
             title = "Reset settings?",
-            body = "Theme, time, map and update preferences go back to their defaults, and NetSeer is unpaired. Drives are kept.",
+            body = "Theme, time, map and update preferences go back to their defaults, and NetSeer is unpaired. Surveys are kept.",
             confirm = "Reset",
             onConfirm = {
                 confirm = null
@@ -535,7 +535,7 @@ private fun UpdatesPane(vm: AppViewModel, settings: Settings, updates: UpdaterSt
     Spacer(Modifier.height(12.dp))
     SwitchRow(
         "Check when WaveTop opens",
-        "Asks GitHub about new releases at most once a day. Nothing about you or your drives is sent.",
+        "Asks GitHub about new releases at most once a day. Nothing about you or your surveys is sent.",
         settings.autoCheckUpdates,
         { on -> vm.updateSettings { it.copy(autoCheckUpdates = on) } },
     )
@@ -557,8 +557,8 @@ private fun UpdatesPane(vm: AppViewModel, settings: Settings, updates: UpdaterSt
     }
     Hint(
         "Update and Reinstall download the APK, check it against the release's SHA256SUMS, and hand it to " +
-            "Android to install; your drives stay put. Android can't install an older version over a newer " +
-            "one, so going back means uninstalling first (back up your drives under Your data).",
+            "Android to install; your surveys stay put. Android can't install an older version over a newer " +
+            "one, so going back means uninstalling first (back up your surveys under Your data).",
         Modifier.padding(top = 10.dp),
     )
     Row(Modifier.padding(top = 8.dp)) {
@@ -650,7 +650,7 @@ private fun HelpPane() {
         HelpCard("Report a problem", "Opens a new issue on GitHub") { openUrl(context, "$REPO_URL/issues/new") }
     }
     Hint(
-        "When you report a problem, include the version shown under About. Don't attach drives from places " +
+        "When you report a problem, include the version shown under About. Don't attach surveys from places " +
             "you need to keep private.",
         Modifier.padding(top = 12.dp),
     )
@@ -697,7 +697,7 @@ private fun AboutPane() {
     }
     Hint(
         "WaveTop surveys the Wi-Fi networks and Bluetooth devices around you using Android's own scanning, " +
-            "pins them on a map, and records wardrives you can share or send to NetSeer. Everything stays on " +
+            "pins them on a map, and records surveys you can share or send to NetSeer. Everything stays on " +
             "this phone unless you send it.",
         Modifier.padding(top = 12.dp),
     )

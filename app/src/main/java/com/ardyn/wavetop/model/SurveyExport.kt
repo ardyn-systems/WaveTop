@@ -6,22 +6,22 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Turns a saved wardrive into formats other tools read:
+ * Turns a saved survey into formats other tools read:
  *  - Kismet netxml: Wi-Fi networks with GPS, which NetSeer maps directly.
  *  - WiGLE CSV 1.4: every geotagged Wi-Fi and Bluetooth sighting, the common wardriving format.
  */
-object DriveExport {
+object SurveyExport {
 
     /** Who wrote the file, for the WiGLE header line. */
     data class DeviceInfo(val appVersion: String, val model: String, val release: String, val device: String, val brand: String)
 
-    fun kismetNetxml(drive: ParsedDrive): String {
-        val wifi = drive.observations.filter { it.phy == Phy.Wifi }.groupBy { it.mac.uppercase() }
+    fun kismetNetxml(survey: ParsedSurvey): String {
+        val wifi = survey.observations.filter { it.phy == Phy.Wifi }.groupBy { it.mac.uppercase() }
         val sb = StringBuilder()
         sb.append("""<?xml version="1.0" encoding="UTF-8"?>""").append('\n')
         sb.append("""<!DOCTYPE detection-run SYSTEM "http://kismetwireless.net/kismet-3.1.0.dtd">""").append('\n')
-        sb.append("""<detection-run kismet-version="WaveTop" start-time="${kismetTime(drive.meta.startedMs)}">""").append('\n')
-        sb.append("  <!-- ").append(xml(drive.meta.name).replace("--", "- -")).append(" -->\n")
+        sb.append("""<detection-run kismet-version="WaveTop" start-time="${kismetTime(survey.meta.startedMs)}">""").append('\n')
+        sb.append("  <!-- ").append(xml(survey.meta.name).replace("--", "- -")).append(" -->\n")
         var number = 0
         for ((bssid, sightings) in wifi) {
             number++
@@ -71,7 +71,7 @@ object DriveExport {
         return sb.toString()
     }
 
-    fun wigleCsv(drive: ParsedDrive, device: DeviceInfo): String {
+    fun wigleCsv(survey: ParsedSurvey, device: DeviceInfo): String {
         val sb = StringBuilder()
         sb.append("WigleWifi-1.4,appRelease=").append(device.appVersion)
             .append(",model=").append(device.model)
@@ -80,7 +80,7 @@ object DriveExport {
             .append(",display=WaveTop,board=,brand=").append(device.brand).append('\n')
         sb.append("MAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\n")
         // WiGLE rows are geolocated sightings; one without a fix can't be placed, so it's left out.
-        for (o in drive.observations) {
+        for (o in survey.observations) {
             val fix = o.fix ?: continue
             val (auth, type) = when (o.phy) {
                 Phy.Wifi -> o.capabilities.ifBlank { "[ESS]" } to "WIFI"

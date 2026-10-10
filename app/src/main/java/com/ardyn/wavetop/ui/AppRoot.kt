@@ -93,7 +93,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 /** Which modal is open; one at a time. */
-private enum class Modal { None, StartWardrive, StopWardrive, NetSeer, Share, DeleteDrive }
+private enum class Modal { None, StartSurvey, StopSurvey, NetSeer, Share, DeleteSurvey }
 
 @Composable
 fun AppRoot(vm: AppViewModel = viewModel()) {
@@ -109,13 +109,13 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
         val permissionLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions(),
         ) { vm.onPermissionsChanged() }
-        // The wardrive notification needs this on Android 13+; recording works either way.
+        // The survey notification needs this on Android 13+; recording works either way.
         val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
         val lifecycleOwner = LocalLifecycleOwner.current
         DisposableEffect(lifecycleOwner) {
             if (!SurveyPermissions.allGranted(context)) permissionLauncher.launch(SurveyPermissions.required())
-            // Scan only while WaveTop is visible (a wardrive keeps the engine going on its own).
+            // Scan only while WaveTop is visible (a survey keeps the engine going on its own).
             val observer = LifecycleEventObserver { _, event ->
                 when (event) {
                     Lifecycle.Event.ON_START -> vm.start()
@@ -135,22 +135,22 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
         val visible = remember(engine.devices, view.filter, view.sort, view.sortDescending) {
             DeviceViews.visible(engine.devices, view.filter, view.sort, view.sortDescending)
         }
-        val inDrive = view.tab == Tab.Drives && view.openDrive != null
-        val pool = if (inDrive) view.openDrive?.devices.orEmpty() else engine.devices
+        val inSurvey = view.tab == Tab.Surveys && view.openSurvey != null
+        val pool = if (inSurvey) view.openSurvey?.devices.orEmpty() else engine.devices
         val selected = remember(pool, view.selectedKey) { view.selectedKey?.let { k -> pool.firstOrNull { it.key == k } } }
 
         BackHandler(enabled = view.settingsPane != null) { vm.backInSettings() }
         BackHandler(enabled = view.settingsPane == null && modal != Modal.None) { modal = Modal.None }
-        BackHandler(enabled = view.settingsPane == null && modal == Modal.None && inDrive && selected == null) { vm.closeDrive() }
+        BackHandler(enabled = view.settingsPane == null && modal == Modal.None && inSurvey && selected == null) { vm.closeSurvey() }
 
-        fun startWardrive() {
+        fun startSurvey() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
                 android.content.pm.PackageManager.PERMISSION_GRANTED
             ) {
                 notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
-            modal = Modal.StartWardrive
+            modal = Modal.StartSurvey
         }
 
         val c = Wt.colors
@@ -162,11 +162,11 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
                     deviceCount = visible.size,
                     updateWaiting = updates.available != null,
                     onLive = vm::setLive,
-                    onWardrive = { if (engine.wardrive == null) startWardrive() else modal = Modal.StopWardrive },
+                    onSurvey = { if (engine.survey == null) startSurvey() else modal = Modal.StopSurvey },
                     onSettings = { vm.openSettings() },
                 )
             },
-            bottomBar = { BottomNav(view.tab, recording = engine.wardrive != null, onSelect = vm::selectTab) },
+            bottomBar = { BottomNav(view.tab, recording = engine.survey != null, onSelect = vm::selectTab) },
         ) { padding ->
             Box(Modifier.padding(padding).fillMaxSize()) {
                 val needsAccess = view.tab == Tab.Devices || view.tab == Tab.Map || view.tab == Tab.Channels
@@ -227,37 +227,37 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
                                     onSelect = vm::select,
                                 )
                                 Tab.Channels -> ChannelsScreen(engine.devices, view.band, vm::setBand)
-                                Tab.Drives -> {
-                                    val open = view.openDrive
+                                Tab.Surveys -> {
+                                    val open = view.openSurvey
                                     if (open == null) {
-                                        DrivesScreen(
-                                            wardrive = engine.wardrive,
+                                        SurveysScreen(
+                                            survey = engine.survey,
                                             liveStream = engine.liveStream,
-                                            drives = engine.drives,
+                                            surveys = engine.surveys,
                                             settings = settings,
-                                            onStart = ::startWardrive,
-                                            onStop = { modal = Modal.StopWardrive },
-                                            onOpen = vm::openDrive,
+                                            onStart = ::startSurvey,
+                                            onStop = { modal = Modal.StopSurvey },
+                                            onOpen = vm::openSurvey,
                                         )
                                     } else {
-                                        DriveDetailScreen(
+                                        SurveyDetailScreen(
                                             open = open,
                                             view = view,
                                             settings = settings,
                                             nowMs = nowMs,
-                                            onBack = vm::closeDrive,
-                                            onTab = vm::setDriveTab,
+                                            onBack = vm::closeSurvey,
+                                            onTab = vm::setSurveyTab,
                                             onFilter = vm::setFilter,
                                             onSort = vm::sortBy,
                                             onSelect = vm::select,
                                             onBasemap = vm::setBasemap,
-                                            onTime = vm::setDriveTime,
+                                            onTime = vm::setSurveyTime,
                                             onSend = {
                                                 vm.resetNetSeerTask()
                                                 modal = Modal.NetSeer
                                             },
                                             onShare = { modal = Modal.Share },
-                                            onDelete = { modal = Modal.DeleteDrive },
+                                            onDelete = { modal = Modal.DeleteSurvey },
                                         )
                                     }
                                 }
@@ -275,35 +275,35 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
                 nowMs = nowMs,
                 settings = settings,
                 onDismiss = { vm.select(null) },
-                // A saved drive has no radar, so only pinned devices can be shown there.
-                onShowOnMap = if (!inDrive || device.bestFix != null) ({ vm.showOnMap(device) }) else null,
+                // A saved survey has no radar, so only pinned devices can be shown there.
+                onShowOnMap = if (!inSurvey || device.bestFix != null) ({ vm.showOnMap(device) }) else null,
             )
         }
 
         when (modal) {
             Modal.None -> Unit
-            Modal.StartWardrive -> WardriveStartDialog(
+            Modal.StartSurvey -> SurveyStartDialog(
                 onStart = { name, streamLive ->
                     modal = Modal.None
-                    if (vm.startWardrive(name, streamLive)) vm.selectTab(Tab.Drives)
+                    if (vm.startSurvey(name, streamLive)) vm.selectTab(Tab.Surveys)
                 },
                 canStream = settings.netSeer != null,
                 onDismiss = { modal = Modal.None },
             )
-            Modal.StopWardrive -> ConfirmDialog(
-                title = "Stop the wardrive?",
-                body = "\"${engine.wardrive?.name}\" will be saved and listed under Drives.",
+            Modal.StopSurvey -> ConfirmDialog(
+                title = "Stop the survey?",
+                body = "\"${engine.survey?.name}\" will be saved and listed under Surveys.",
                 confirm = "Stop and save",
                 onConfirm = {
                     modal = Modal.None
-                    vm.stopWardrive()
+                    vm.stopSurvey()
                 },
                 onDismiss = { modal = Modal.None },
             )
             Modal.NetSeer -> SendToNetSeerDialog(
                 paired = settings.netSeer,
                 task = view.netSeerTask,
-                onSend = vm::sendOpenDriveToNetSeer,
+                onSend = vm::sendOpenSurveyToNetSeer,
                 onOpenSettings = {
                     modal = Modal.None
                     vm.openSettings(com.ardyn.wavetop.ui.SettingsPane.NetSeer)
@@ -313,19 +313,19 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
             Modal.Share -> ShareDialog(
                 onPick = { format ->
                     modal = Modal.None
-                    scope.launch { vm.exportOpenDrive(format)?.let { shareFile(context, it, format.mime) } }
+                    scope.launch { vm.exportOpenSurvey(format)?.let { shareFile(context, it, format.mime) } }
                 },
                 onDismiss = { modal = Modal.None },
             )
-            Modal.DeleteDrive -> view.openDrive?.let { open ->
+            Modal.DeleteSurvey -> view.openSurvey?.let { open ->
                 ConfirmDialog(
-                    title = "Delete this drive?",
+                    title = "Delete this survey?",
                     body = "\"${open.entry.meta.name}\" will be removed from this phone. This can't be undone.",
                     confirm = "Delete",
                     danger = true,
                     onConfirm = {
                         modal = Modal.None
-                        vm.deleteDrive(open.entry)
+                        vm.deleteSurvey(open.entry)
                     },
                     onDismiss = { modal = Modal.None },
                 )
@@ -355,7 +355,7 @@ private fun TopBar(
     deviceCount: Int,
     updateWaiting: Boolean,
     onLive: (Boolean) -> Unit,
-    onWardrive: () -> Unit,
+    onSurvey: () -> Unit,
     onSettings: () -> Unit,
 ) {
     val c = Wt.colors
@@ -381,7 +381,7 @@ private fun TopBar(
                         append("$deviceCount device${if (deviceCount == 1) "" else "s"}")
                         when {
                             scanning.isNotEmpty() -> append(" · scanning ${scanning.joinToString(" + ")}")
-                            !engine.live && engine.wardrive == null -> append(" · paused")
+                            !engine.live && engine.survey == null -> append(" · paused")
                         }
                     },
                     fontSize = 11.5.sp,
@@ -392,7 +392,7 @@ private fun TopBar(
             }
             LivePill(engine.live, onClick = { onLive(!engine.live) })
             Spacer(Modifier.width(6.dp))
-            WardrivePill(engine, onWardrive)
+            SurveyPill(engine, onSurvey)
             Box {
                 IconButton(onClick = onSettings) {
                     Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = c.muted)
@@ -422,12 +422,12 @@ private fun LivePill(live: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** Start a wardrive from anywhere; while recording it shows the elapsed time and stops it. */
+/** Start a survey from anywhere; while recording it shows the elapsed time and stops it. */
 @Composable
-private fun WardrivePill(engine: EngineState, onClick: () -> Unit) {
+private fun SurveyPill(engine: EngineState, onClick: () -> Unit) {
     val c = Wt.colors
     val shape = RoundedCornerShape(999.dp)
-    val status = engine.wardrive
+    val status = engine.survey
     Row(
         Modifier
             .clip(shape)
@@ -440,7 +440,7 @@ private fun WardrivePill(engine: EngineState, onClick: () -> Unit) {
         if (status == null) {
             Icon(Icons.Outlined.FiberManualRecord, null, tint = c.danger, modifier = Modifier.size(12.dp))
             Spacer(Modifier.width(5.dp))
-            Text("Drive", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = c.text)
+            Text("Survey", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = c.text)
         } else {
             val clock = rememberClock(1_000)
             Icon(Icons.Outlined.Stop, null, tint = c.danger, modifier = Modifier.size(14.dp))
@@ -467,12 +467,12 @@ private fun BottomNav(selected: Tab, recording: Boolean, onSelect: (Tab) -> Unit
                                     Tab.Devices -> Icons.Outlined.ViewList
                                     Tab.Map -> Icons.Outlined.Map
                                     Tab.Channels -> Icons.Outlined.BarChart
-                                    Tab.Drives -> Icons.Outlined.Route
+                                    Tab.Surveys -> Icons.Outlined.Route
                                     Tab.Log -> Icons.Outlined.Notes
                                 },
                                 contentDescription = null,
                             )
-                            if (tab == Tab.Drives && recording) {
+                            if (tab == Tab.Surveys && recording) {
                                 Box(Modifier.align(Alignment.TopEnd).size(8.dp).clip(CircleShape).background(c.danger))
                             }
                         }
@@ -543,7 +543,7 @@ fun openIntent(context: Context, intent: Intent) {
 
 fun openUrl(context: Context, url: String) = openIntent(context, Intent(Intent.ACTION_VIEW, Uri.parse(url)))
 
-/** Hands a file to the system share sheet (Drive, email, Files, the WiGLE app…). */
+/** Hands a file to the system share sheet (Survey, email, Files, the WiGLE app…). */
 fun shareFile(context: Context, file: File, mime: String) {
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.wavetop.files", file)
     val send = Intent(Intent.ACTION_SEND)

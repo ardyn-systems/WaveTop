@@ -3,7 +3,7 @@ package com.ardyn.wavetop.model
 import kotlin.math.abs
 
 /**
- * One fresh sighting of a device — what a wardrive records. [fix] is set only when a
+ * One fresh sighting of a device — what a survey records. [fix] is set only when a
  * location good enough to geotag it was available at that moment (see [DeviceTracker]).
  */
 data class Observation(
@@ -92,7 +92,7 @@ class DeviceTracker(
             obs to r.sections()
         }
 
-    /** Replays a recorded sighting, e.g. when opening a saved wardrive. Its fix is trusted as recorded. */
+    /** Replays a recorded sighting, e.g. when opening a saved survey. Its fix is trusted as recorded. */
     fun replay(obs: Observation) {
         merge(obs, sectionsFor(obs))
     }

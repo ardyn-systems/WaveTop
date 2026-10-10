@@ -4,14 +4,14 @@ import android.app.Application
 import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.ardyn.wavetop.drive.DriveEntry
-import com.ardyn.wavetop.drive.ExportFormat
+import com.ardyn.wavetop.survey.SurveyEntry
+import com.ardyn.wavetop.survey.ExportFormat
 import com.ardyn.wavetop.engine.EngineState
 import com.ardyn.wavetop.engine.SurveyEngine
 import com.ardyn.wavetop.model.DeviceSort
 import com.ardyn.wavetop.model.DeviceTracker
 import com.ardyn.wavetop.model.GeoFix
-import com.ardyn.wavetop.model.ParsedDrive
+import com.ardyn.wavetop.model.ParsedSurvey
 import com.ardyn.wavetop.model.PhyFilter
 import com.ardyn.wavetop.model.TrackedDevice
 import com.ardyn.wavetop.model.WifiBand
@@ -36,7 +36,7 @@ enum class Tab(val label: String) {
     Devices("Devices"),
     Map("Map"),
     Channels("Channels"),
-    Drives("Drives"),
+    Surveys("Surveys"),
     Log("Log"),
 }
 
@@ -45,7 +45,7 @@ enum class MapMode(val label: String) { Street("Street"), Radar("Radar") }
 /** NetSeer's geo map offers streets or nothing behind the pins; so does WaveTop. */
 enum class Basemap(val label: String) { Streets("Streets"), None("No basemap") }
 
-enum class DriveTab(val label: String) { Devices("Devices"), Map("Map") }
+enum class SurveyTab(val label: String) { Devices("Devices"), Map("Map") }
 
 enum class SettingsPane(val label: String) {
     General("General"),
@@ -56,17 +56,17 @@ enum class SettingsPane(val label: String) {
     About("About"),
 }
 
-/** A saved wardrive opened from the Drives tab, replayed into devices for the table and map. */
-data class OpenDrive(
-    val entry: DriveEntry,
-    val drive: ParsedDrive? = null,
+/** A saved survey opened from the Surveys tab, replayed into devices for the table and map. */
+data class OpenSurvey(
+    val entry: SurveyEntry,
+    val survey: ParsedSurvey? = null,
     val devices: List<TrackedDevice> = emptyList(),
     /** Where the phone was at each geotagged sighting, in time order: the route driven. */
     val track: List<GeoFix> = emptyList(),
     val loading: Boolean = true,
     val error: String? = null,
-    val tab: DriveTab = DriveTab.Devices,
-    /** Map time slider (epoch ms); null shows the whole drive. */
+    val tab: SurveyTab = SurveyTab.Devices,
+    /** Map time slider (epoch ms); null shows the whole survey. */
     val timeMs: Long? = null,
 )
 
@@ -92,11 +92,11 @@ data class ViewState(
     val highlightKey: String? = null,
     /** Bumped to make the street map fly to [highlightKey]. */
     val focusNonce: Int = 0,
-    val openDrive: OpenDrive? = null,
+    val openSurvey: OpenSurvey? = null,
     /** Settings is open on this pane (null = closed). On phones the list shows first: [settingsList]. */
     val settingsPane: SettingsPane? = null,
     val settingsList: Boolean = true,
-    /** Pairing with NetSeer, testing it, or sending a drive. */
+    /** Pairing with NetSeer, testing it, or sending a survey. */
     val netSeerTask: TaskStatus = TaskStatus.Idle,
     /** Your data: export/delete-all results. */
     val dataTask: TaskStatus = TaskStatus.Idle,
@@ -122,7 +122,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (attached) return
         attached = true
         engine.attachUi()
-        engine.refreshDrives()
+        engine.refreshSurveys()
     }
 
     fun stop() {
@@ -175,12 +175,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * Closes the details sheet and shows the device on a map: the street map if it has been
-     * pinned, otherwise the radar. Works for the live list and for an open wardrive.
+     * pinned, otherwise the radar. Works for the live list and for an open survey.
      */
     fun showOnMap(device: TrackedDevice) = _view.update { v ->
         val base = v.copy(selectedKey = null, highlightKey = device.key, focusNonce = v.focusNonce + 1)
-        if (v.tab == Tab.Drives && v.openDrive != null) {
-            base.copy(openDrive = v.openDrive.copy(tab = DriveTab.Map, timeMs = null))
+        if (v.tab == Tab.Surveys && v.openSurvey != null) {
+            base.copy(openSurvey = v.openSurvey.copy(tab = SurveyTab.Map, timeMs = null))
         } else {
             base.copy(
                 tab = Tab.Map,
@@ -191,18 +191,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // --- wardrive ----------------------------------------------------------------------------
+    // --- survey ----------------------------------------------------------------------------
 
-    fun startWardrive(name: String, streamLive: Boolean): Boolean = engine.startWardrive(name, streamLive)
+    fun startSurvey(name: String, streamLive: Boolean): Boolean = engine.startSurvey(name, streamLive)
 
-    fun stopWardrive() = engine.stopWardrive()
+    fun stopSurvey() = engine.stopSurvey()
 
-    fun openDrive(entry: DriveEntry) {
-        _view.update { it.copy(openDrive = OpenDrive(entry), selectedKey = null, highlightKey = null) }
+    fun openSurvey(entry: SurveyEntry) {
+        _view.update { it.copy(openSurvey = OpenSurvey(entry), selectedKey = null, highlightKey = null) }
         viewModelScope.launch {
-            val drive = engine.loadDrive(entry)
-            // Replay every sighting so the drive reads like a live survey: history, min/max, best pin.
-            val replayed = drive?.let {
+            val survey = engine.loadSurvey(entry)
+            // Replay every sighting so the survey reads like a live survey: history, min/max, best pin.
+            val replayed = survey?.let {
                 withContext(Dispatchers.Default) {
                     val tracker = DeviceTracker(historySize = 60, expireAfterMs = Long.MAX_VALUE / 4)
                     it.observations.sortedBy { o -> o.timeMs }.forEach(tracker::replay)
@@ -212,13 +212,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             _view.update { v ->
-                if (v.openDrive?.entry?.id != entry.id) return@update v
-                if (drive == null || replayed == null) {
-                    v.copy(openDrive = v.openDrive.copy(loading = false, error = "This file couldn't be read."))
+                if (v.openSurvey?.entry?.id != entry.id) return@update v
+                if (survey == null || replayed == null) {
+                    v.copy(openSurvey = v.openSurvey.copy(loading = false, error = "This file couldn't be read."))
                 } else {
                     v.copy(
-                        openDrive = v.openDrive.copy(
-                            drive = drive,
+                        openSurvey = v.openSurvey.copy(
+                            survey = survey,
                             devices = replayed.first,
                             track = replayed.second,
                             loading = false,
@@ -229,22 +229,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun closeDrive() = _view.update { it.copy(openDrive = null, selectedKey = null, highlightKey = null) }
+    fun closeSurvey() = _view.update { it.copy(openSurvey = null, selectedKey = null, highlightKey = null) }
 
-    fun setDriveTab(tab: DriveTab) = _view.update { v -> v.copy(openDrive = v.openDrive?.copy(tab = tab)) }
+    fun setSurveyTab(tab: SurveyTab) = _view.update { v -> v.copy(openSurvey = v.openSurvey?.copy(tab = tab)) }
 
-    fun setDriveTime(timeMs: Long?) = _view.update { v -> v.copy(openDrive = v.openDrive?.copy(timeMs = timeMs)) }
+    fun setSurveyTime(timeMs: Long?) = _view.update { v -> v.copy(openSurvey = v.openSurvey?.copy(timeMs = timeMs)) }
 
-    fun deleteDrive(entry: DriveEntry) {
-        engine.deleteDrive(entry)
-        if (_view.value.openDrive?.entry?.id == entry.id) closeDrive()
+    fun deleteSurvey(entry: SurveyEntry) {
+        engine.deleteSurvey(entry)
+        if (_view.value.openSurvey?.entry?.id == entry.id) closeSurvey()
     }
 
-    /** Writes an export of the open drive to the share cache. */
-    suspend fun exportOpenDrive(format: ExportFormat): File? {
-        val open = _view.value.openDrive ?: return null
-        val drive = open.drive ?: return null
-        return runCatching { engine.exportDrive(open.entry, drive, format) }
+    /** Writes an export of the open survey to the share cache. */
+    suspend fun exportOpenSurvey(format: ExportFormat): File? {
+        val open = _view.value.openSurvey ?: return null
+        val survey = open.survey ?: return null
+        return runCatching { engine.exportSurvey(open.entry, survey, format) }
             .onFailure { engine.log("Export failed: ${it.message}", warning = true) }
             .getOrNull()
     }
@@ -255,24 +255,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissWelcome() = appSettings.update { it.copy(welcomed = true) }
 
-    /** Your data → export every saved drive as one zip, for backup or moving phones. */
-    suspend fun exportAllDrives(): File? {
-        _view.update { it.copy(dataTask = TaskStatus.Working("Packing your drives…")) }
-        val file = runCatching { engine.exportAllDrives() }.getOrElse {
-            _view.update { v -> v.copy(dataTask = TaskStatus.Failed("Couldn't pack the drives: ${it.message}")) }
+    /** Your data → export every saved survey as one zip, for backup or moving phones. */
+    suspend fun exportAllSurveys(): File? {
+        _view.update { it.copy(dataTask = TaskStatus.Working("Packing your surveys…")) }
+        val file = runCatching { engine.exportAllSurveys() }.getOrElse {
+            _view.update { v -> v.copy(dataTask = TaskStatus.Failed("Couldn't pack the surveys: ${it.message}")) }
             return null
         }
         _view.update {
-            it.copy(dataTask = if (file == null) TaskStatus.Failed("There are no saved drives yet.") else TaskStatus.Idle)
+            it.copy(dataTask = if (file == null) TaskStatus.Failed("There are no saved surveys yet.") else TaskStatus.Idle)
         }
         return file
     }
 
-    fun deleteAllDrives() {
+    fun deleteAllSurveys() {
         viewModelScope.launch {
-            val n = engine.deleteAllDrives()
-            closeDrive()
-            _view.update { it.copy(dataTask = TaskStatus.Done("Deleted $n saved drive${if (n == 1) "" else "s"}.")) }
+            val n = engine.deleteAllSurveys()
+            closeSurvey()
+            _view.update { it.copy(dataTask = TaskStatus.Done("Deleted $n saved survey${if (n == 1) "" else "s"}.")) }
         }
     }
 
@@ -320,7 +320,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 .onSuccess { link ->
                     appSettings.update { it.copy(netSeer = link) }
                     engine.log("Paired with NetSeer at $url")
-                    setNetSeerTask(TaskStatus.Done("Paired. Drives can now go straight to NetSeer."))
+                    setNetSeerTask(TaskStatus.Done("Paired. Surveys can now go straight to NetSeer."))
                 }
                 .onFailure { setNetSeerTask(TaskStatus.Failed(it.message ?: "Pairing failed")) }
         }
@@ -333,19 +333,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Pushes the open drive to the paired NetSeer as a WiGLE CSV: Wi-Fi *and* Bluetooth with the
+     * Pushes the open survey to the paired NetSeer as a WiGLE CSV: Wi-Fi *and* Bluetooth with the
      * GPS position of every sighting, which NetSeer maps and turns into location estimates.
      */
-    fun sendOpenDriveToNetSeer() {
-        val open = _view.value.openDrive ?: return
-        val drive = open.drive ?: return
+    fun sendOpenSurveyToNetSeer() {
+        val open = _view.value.openSurvey ?: return
+        val survey = open.survey ?: return
         val link = settings.value.netSeer
             ?: return setNetSeerTask(TaskStatus.Failed("Pair with NetSeer first: Settings → NetSeer."))
-        if (drive.observations.none { it.fix != null }) {
-            return setNetSeerTask(TaskStatus.Failed("Nothing in this drive has a GPS position, so there's nothing to map."))
+        if (survey.observations.none { it.fix != null }) {
+            return setNetSeerTask(TaskStatus.Failed("Nothing in this survey has a GPS position, so there's nothing to map."))
         }
         runNetSeer("Sending \"${open.entry.meta.name}\" to NetSeer…") {
-            val file = runCatching { engine.exportDrive(open.entry, drive, ExportFormat.WigleCsv) }.getOrElse {
+            val file = runCatching { engine.exportSurvey(open.entry, survey, ExportFormat.WigleCsv) }.getOrElse {
                 setNetSeerTask(TaskStatus.Failed("Couldn't build the export: ${it.message}"))
                 return@runNetSeer
             }

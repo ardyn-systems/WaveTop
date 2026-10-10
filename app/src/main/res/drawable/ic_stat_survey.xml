@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Status-bar icon for the wardrive notification: a dot with two signal arcs. Must be single-colour. -->
+<!-- Status-bar icon for the survey notification: a dot with two signal arcs. Must be single-colour. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"

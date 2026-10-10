@@ -22,7 +22,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Wardrive keeps scanning with the screen off from a location foreground service. -->
+    <!-- Survey keeps scanning with the screen off from a location foreground service. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -67,7 +67,7 @@
         </activity>
 
         <service
-            android:name=".drive.WardriveService"
+            android:name=".survey.SurveyService"
             android:exported="false"
             android:foregroundServiceType="location" />
 

@@ -34,7 +34,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ardyn.wavetop.drive.ExportFormat
+import com.ardyn.wavetop.survey.ExportFormat
 import com.ardyn.wavetop.model.TrackedDevice
 import com.ardyn.wavetop.prefs.NetSeerLink
 import com.ardyn.wavetop.ui.theme.MonoStyle
@@ -101,15 +101,15 @@ fun WtTextField(
     )
 }
 
-/** Asks for the wardrive's name up front; it's saved under that name when stopped. */
+/** Asks for the survey's name up front; it's saved under that name when stopped. */
 @Composable
-fun WardriveStartDialog(onStart: (String, Boolean) -> Unit, canStream: Boolean, onDismiss: () -> Unit) {
-    val default = remember { "Drive " + SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date()) }
+fun SurveyStartDialog(onStart: (String, Boolean) -> Unit, canStream: Boolean, onDismiss: () -> Unit) {
+    val default = remember { "Survey " + SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date()) }
     var name by remember { mutableStateOf(default) }
     var stream by remember { mutableStateOf(canStream) }
     fun start() = onStart(name, stream && canStream)
     WtDialog(
-        title = "Start a wardrive",
+        title = "Start a survey",
         onDismiss = onDismiss,
         confirm = { WtButton("Start", { start() }, kind = BtnKind.Primary) },
         dismiss = { WtButton("Cancel", onDismiss, kind = BtnKind.Ghost) },
@@ -120,7 +120,7 @@ fun WardriveStartDialog(onStart: (String, Boolean) -> Unit, canStream: Boolean, 
             if (canStream) {
                 SwitchRow(
                     title = "Stream live to NetSeer",
-                    subtitle = "NetSeer builds the map as you drive. The drive is still saved and can be sent again after.",
+                    subtitle = "NetSeer builds the map as you survey. The survey is still saved and can be sent again after.",
                     checked = stream,
                     onChange = { stream = it },
                 )
@@ -152,7 +152,7 @@ fun ConfirmDialog(
     ) { Text(body, style = MaterialTheme.typography.bodyMedium) }
 }
 
-/** One tap to send the open drive to the paired NetSeer, or a pointer to pair first. */
+/** One tap to send the open survey to the paired NetSeer, or a pointer to pair first. */
 @Composable
 fun SendToNetSeerDialog(
     paired: NetSeerLink?,
@@ -181,7 +181,7 @@ fun SendToNetSeerDialog(
                 )
             } else {
                 Text(
-                    "Sends this drive's Wi-Fi and Bluetooth sightings, with their GPS positions, to NetSeer at " +
+                    "Sends this survey's Wi-Fi and Bluetooth sightings, with their GPS positions, to NetSeer at " +
                         "${paired.baseUrl}. NetSeer maps it and estimates where each device is.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -203,7 +203,7 @@ fun SendToNetSeerDialog(
 fun ShareDialog(onPick: (ExportFormat) -> Unit, onDismiss: () -> Unit) {
     val c = Wt.colors
     WtDialog(
-        title = "Share this drive as…",
+        title = "Share this survey as…",
         onDismiss = onDismiss,
         confirm = { WtButton("Cancel", onDismiss, kind = BtnKind.Ghost) },
     ) {

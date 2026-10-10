@@ -1,7 +1,7 @@
 package com.ardyn.wavetop.model
 
-/** What a saved wardrive says about itself; counts are null until the drive is finished. */
-data class DriveMeta(
+/** What a saved survey says about itself; counts are null until the survey is finished. */
+data class SurveyMeta(
     val name: String,
     val startedMs: Long,
     val endedMs: Long? = null,
@@ -10,23 +10,23 @@ data class DriveMeta(
     val bluetoothDevices: Int? = null,
     val geotagged: Int? = null,
 ) {
-    /** A drive with no end line was cut short (app killed, phone died) and saved up to that point. */
+    /** A survey with no end line was cut short (app killed, phone died) and saved up to that point. */
     val interrupted: Boolean get() = endedMs == null
 }
 
-class ParsedDrive(val meta: DriveMeta, val observations: List<Observation>) {
-    /** Ended time, or the last sighting for an interrupted drive. */
+class ParsedSurvey(val meta: SurveyMeta, val observations: List<Observation>) {
+    /** Ended time, or the last sighting for an interrupted survey. */
     val endMs: Long get() = meta.endedMs ?: observations.maxOfOrNull { it.timeMs } ?: meta.startedMs
     val durationMs: Long get() = (endMs - meta.startedMs).coerceAtLeast(0)
 }
 
 /**
- * WaveTop's native wardrive file: a CSV with one row per sighting, wrapped in `#` metadata
- * lines. Rows are appended as the drive runs, so a crash still leaves a readable file;
- * the footer with the end time and totals is written when the drive is stopped.
+ * WaveTop's native survey file: a CSV with one row per sighting, wrapped in `#` metadata
+ * lines. Rows are appended as the survey runs, so a crash still leaves a readable file;
+ * the footer with the end time and totals is written when the survey is stopped.
  *
  * ```
- * # wavetop-wardrive,1
+ * # wavetop-survey,1
  * # name,Downtown loop
  * # started,1791142200000
  * time_ms,phy,mac,name,type,crypto,capabilities,channel,freq_mhz,rssi,lat,lon,accuracy_m,manufacturer
@@ -35,8 +35,8 @@ class ParsedDrive(val meta: DriveMeta, val observations: List<Observation>) {
  * # totals,812,140,61,790
  * ```
  */
-object WardriveCsv {
-    const val MAGIC = "wavetop-wardrive"
+object SurveyCsv {
+    const val MAGIC = "wavetop-survey"
     const val VERSION = 1
     const val EXTENSION = ".wtdrive.csv"
     private const val COLUMNS =
@@ -72,8 +72,8 @@ object WardriveCsv {
         "# " + Csv.join(listOf("ended", endedMs.toString())) + "\n" +
             "# " + Csv.join(listOf("totals", "$observations", "$wifi", "$bluetooth", "$geotagged")) + "\n"
 
-    /** Reads only the `#` lines — enough for the drive list without loading every row. */
-    fun parseMeta(commentLines: List<String>): DriveMeta? {
+    /** Reads only the `#` lines — enough for the survey list without loading every row. */
+    fun parseMeta(commentLines: List<String>): SurveyMeta? {
         var name: String? = null
         var started: Long? = null
         var ended: Long? = null
@@ -91,8 +91,8 @@ object WardriveCsv {
             }
         }
         if (!magic || started == null) return null
-        return DriveMeta(
-            name = name ?: "Untitled drive",
+        return SurveyMeta(
+            name = name ?: "Untitled survey",
             startedMs = started,
             endedMs = ended,
             observations = totals?.getOrNull(0)?.toIntOrNull(),
@@ -102,7 +102,7 @@ object WardriveCsv {
         )
     }
 
-    fun parse(lines: Sequence<String>): ParsedDrive? {
+    fun parse(lines: Sequence<String>): ParsedSurvey? {
         val comments = ArrayList<String>()
         val observations = ArrayList<Observation>()
         for (line in lines) {
@@ -114,7 +114,7 @@ object WardriveCsv {
             }
         }
         val meta = parseMeta(comments) ?: return null
-        return ParsedDrive(meta, observations)
+        return ParsedSurvey(meta, observations)
     }
 
     /** A half-written last row (power cut mid-write) is skipped rather than failing the file. */

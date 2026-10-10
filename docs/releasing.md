@@ -41,7 +41,7 @@ The maintainer's copy has a script that sets all four with the GitHub CLI withou
 (`add-github-secrets.ps1`, next to the keystore).
 
 > **Back the keystore and its password up somewhere safe.** If they're lost, no future release can
-> update existing installs: everyone would have to uninstall (losing their drives unless backed up) and
+> update existing installs: everyone would have to uninstall (losing their surveys unless backed up) and
 > install again.
 
 For a local signed build, put a gitignored `keystore.properties` at the repo root:
