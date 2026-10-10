@@ -37,6 +37,8 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Info
@@ -339,67 +341,12 @@ private fun NetSeerPane(vm: AppViewModel, view: ViewState, settings: Settings) {
         return
     }
 
-    SectionLabel("1 · How to reach NetSeer")
-    Segmented(
-        NetSeerRoute.entries,
-        settings.netSeerRoute,
-        { if (it == NetSeerRoute.Usb) "USB cable" else "Wi-Fi / network" },
-        vm::setNetSeerRoute,
-    )
-    Spacer(Modifier.height(10.dp))
-    when (settings.netSeerRoute) {
-        NetSeerRoute.Usb -> {
-            Hint(
-                "Plug the phone into the computer running NetSeer with USB debugging on, and allow the computer " +
-                    "when the phone asks. If NetSeer's Settings → Integrations has an \"Over USB\" section, it " +
-                    "links the phone by itself: nothing to type.",
-            )
-            Hint(
-                "Older NetSeer: run this in PowerShell on the computer each time you plug in, with NetSeer's " +
-                    "port (shown next to \"This NetSeer\") as the last number:",
-                Modifier.padding(top = 8.dp),
-            )
-            Text(
-                "& \"\$env:LOCALAPPDATA\\Android\\Sdk\\platform-tools\\adb.exe\" reverse tcp:47331 tcp:47331",
-                style = MonoStyle.copy(fontSize = 13.sp),
-                color = c.text,
-                modifier = Modifier
-                    .padding(vertical = 8.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(c.raised)
-                    .border(1.dp, c.line, RoundedCornerShape(6.dp))
-                    .padding(10.dp),
-            )
-            Hint("With more than one phone or emulator connected, add -s and the phone's serial after adb.exe. NetSeer stays private to that computer; nothing else on the network can reach it.")
-        }
-        NetSeerRoute.Network -> {
-            WtTextField(
-                settings.netSeerHost,
-                vm::setNetSeerHost,
-                "NetSeer's address",
-                placeholder = "192.168.1.20",
-                keyboardType = KeyboardType.Uri,
-                mono = true,
-            )
-            Hint(
-                "In NetSeer, turn on Settings → Integrations → Allow devices on my network; it shows the " +
-                    "address to type here. Port 47331 is assumed unless you add one.",
-                Modifier.padding(top = 6.dp),
-            )
-        }
-    }
-    Spacer(Modifier.height(10.dp))
-    WtButton("Test connection", vm::testNetSeer)
-
-    SectionLabel("2 · Pair")
-    Hint("In NetSeer: Settings → Integrations → Pair a device. Scan the QR it shows, or type the code (it lasts five minutes).")
-    Spacer(Modifier.height(10.dp))
-    // Scan the QR NetSeer shows — it carries the address and the code, so there's nothing to type.
-    // The scanner (ZXing) asks for the camera itself the first time.
+    // Primary path: scan the QR NetSeer shows — it carries the address and the code, so there's
+    // nothing to type. The scanner (ZXing) asks for the camera itself the first time.
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         result.contents?.let { vm.pairFromQr(it) }
     }
+    Spacer(Modifier.height(4.dp))
     WtButton(
         "Scan QR code",
         {
@@ -417,28 +364,107 @@ private fun NetSeerPane(vm: AppViewModel, view: ViewState, settings: Settings) {
         icon = Icons.Outlined.QrCodeScanner,
         enabled = view.netSeerTask !is TaskStatus.Working,
     )
-    Spacer(Modifier.height(14.dp))
-    Hint("Or type the code:")
-    Spacer(Modifier.height(8.dp))
-    // Keep the code field and the Pair button above the keyboard together, not just the field.
-    val pairRow = remember { BringIntoViewRequester() }
-    val scope = rememberCoroutineScope()
-    Column(Modifier.bringIntoViewRequester(pairRow)) {
-        WtTextField(
-            code,
-            { code = it.filter(Char::isDigit).take(6) },
-            "Pairing code",
-            Modifier.onFocusChanged { focus ->
-                if (focus.isFocused) scope.launch { delay(350); pairRow.bringIntoView() }
-            },
-            placeholder = "123456",
-            keyboardType = KeyboardType.NumberPassword,
-            mono = true,
-            onDone = { vm.pairNetSeer(code) },
+    Hint(
+        "In NetSeer: Settings → Integrations → Pair a device. Point the camera at the QR it shows " +
+            "(good for five minutes). Reaches NetSeer over Wi-Fi or a private network like Tailscale.",
+        Modifier.padding(top = 8.dp),
+    )
+    StatusLine(view.netSeerTask)
+
+    // Fallbacks for anyone who can't scan: plugged-in USB, or a typed address — both with the code.
+    var showManual by rememberSaveable { mutableStateOf(false) }
+    Spacer(Modifier.height(6.dp))
+    ExpandRow("Pair another way", showManual) { showManual = !showManual }
+    if (showManual) {
+        Spacer(Modifier.height(6.dp))
+        Segmented(
+            NetSeerRoute.entries,
+            settings.netSeerRoute,
+            { if (it == NetSeerRoute.Usb) "USB cable" else "Wi-Fi / network" },
+            vm::setNetSeerRoute,
         )
         Spacer(Modifier.height(10.dp))
-        WtButton("Pair", { vm.pairNetSeer(code) }, kind = BtnKind.Default, enabled = view.netSeerTask !is TaskStatus.Working)
-        StatusLine(view.netSeerTask)
+        when (settings.netSeerRoute) {
+            NetSeerRoute.Usb -> {
+                Hint(
+                    "Plug the phone into the computer running NetSeer with USB debugging on, and allow the " +
+                        "computer when asked. NetSeer links it by itself, then shows a code — type it below. " +
+                        "NetSeer stays private to that computer.",
+                )
+                var showAdb by rememberSaveable { mutableStateOf(false) }
+                ExpandRow("Older NetSeer (manual adb)", showAdb) { showAdb = !showAdb }
+                if (showAdb) {
+                    Hint(
+                        "Run this in PowerShell each time you plug in, with NetSeer's port (next to \"This " +
+                            "NetSeer\") as the last number; add -s <serial> if more than one device is connected:",
+                        Modifier.padding(top = 6.dp),
+                    )
+                    Text(
+                        "& \"\$env:LOCALAPPDATA\\Android\\Sdk\\platform-tools\\adb.exe\" reverse tcp:47331 tcp:47331",
+                        style = MonoStyle.copy(fontSize = 13.sp),
+                        color = c.text,
+                        modifier = Modifier
+                            .padding(vertical = 8.dp)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(c.raised)
+                            .border(1.dp, c.line, RoundedCornerShape(6.dp))
+                            .padding(10.dp),
+                    )
+                }
+            }
+            NetSeerRoute.Network -> {
+                WtTextField(
+                    settings.netSeerHost,
+                    vm::setNetSeerHost,
+                    "NetSeer's address",
+                    placeholder = "192.168.1.20",
+                    keyboardType = KeyboardType.Uri,
+                    mono = true,
+                )
+                Hint(
+                    "In NetSeer, turn on Settings → Integrations → Allow devices on my network; it shows " +
+                        "the address to type here. Port 47331 is assumed unless you add one.",
+                    Modifier.padding(top = 6.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        WtButton("Test connection", vm::testNetSeer)
+        Spacer(Modifier.height(12.dp))
+        // Keep the code field and the Pair button above the keyboard together, not just the field.
+        val pairRow = remember { BringIntoViewRequester() }
+        val scope = rememberCoroutineScope()
+        Column(Modifier.bringIntoViewRequester(pairRow)) {
+            WtTextField(
+                code,
+                { code = it.filter(Char::isDigit).take(6) },
+                "Pairing code",
+                Modifier.onFocusChanged { focus ->
+                    if (focus.isFocused) scope.launch { delay(350); pairRow.bringIntoView() }
+                },
+                placeholder = "123456",
+                keyboardType = KeyboardType.NumberPassword,
+                mono = true,
+                onDone = { vm.pairNetSeer(code) },
+            )
+            Spacer(Modifier.height(10.dp))
+            WtButton("Pair", { vm.pairNetSeer(code) }, kind = BtnKind.Default, enabled = view.netSeerTask !is TaskStatus.Working)
+        }
+    }
+}
+
+/** A quiet clickable header that expands/collapses the content below it. */
+@Composable
+private fun ExpandRow(label: String, expanded: Boolean, onToggle: () -> Unit) {
+    val c = Wt.colors
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { onToggle() }.padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = MaterialTheme.typography.labelLarge, color = c.muted)
+        Spacer(Modifier.weight(1f))
+        Icon(if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, contentDescription = null, tint = c.muted)
     }
 }
 
