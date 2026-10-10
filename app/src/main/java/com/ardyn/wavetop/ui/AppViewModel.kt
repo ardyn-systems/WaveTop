@@ -193,7 +193,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     // --- wardrive ----------------------------------------------------------------------------
 
-    fun startWardrive(name: String): Boolean = engine.startWardrive(name)
+    fun startWardrive(name: String, streamLive: Boolean): Boolean = engine.startWardrive(name, streamLive)
 
     fun stopWardrive() = engine.stopWardrive()
 

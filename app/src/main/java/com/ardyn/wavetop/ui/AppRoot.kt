@@ -232,6 +232,7 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
                                     if (open == null) {
                                         DrivesScreen(
                                             wardrive = engine.wardrive,
+                                            liveStream = engine.liveStream,
                                             drives = engine.drives,
                                             settings = settings,
                                             onStart = ::startWardrive,
@@ -282,10 +283,11 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
         when (modal) {
             Modal.None -> Unit
             Modal.StartWardrive -> WardriveStartDialog(
-                onStart = { name ->
+                onStart = { name, streamLive ->
                     modal = Modal.None
-                    if (vm.startWardrive(name)) vm.selectTab(Tab.Drives)
+                    if (vm.startWardrive(name, streamLive)) vm.selectTab(Tab.Drives)
                 },
+                canStream = settings.netSeer != null,
                 onDismiss = { modal = Modal.None },
             )
             Modal.StopWardrive -> ConfirmDialog(

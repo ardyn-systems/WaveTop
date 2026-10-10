@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ardyn.wavetop.drive.DriveEntry
 import com.ardyn.wavetop.engine.WardriveStatus
+import com.ardyn.wavetop.net.LiveState
 import com.ardyn.wavetop.model.DeviceSort
 import com.ardyn.wavetop.model.DeviceViews
 import com.ardyn.wavetop.model.Phy
@@ -56,6 +57,7 @@ import com.ardyn.wavetop.ui.theme.Wt
 @Composable
 fun DrivesScreen(
     wardrive: WardriveStatus?,
+    liveStream: LiveState?,
     drives: List<DriveEntry>,
     settings: Settings,
     onStart: () -> Unit,
@@ -70,7 +72,7 @@ fun DrivesScreen(
     ) {
         item(key = "control") {
             if (wardrive != null) {
-                ActiveDrive(wardrive, onStop)
+                ActiveDrive(wardrive, liveStream, onStop)
             } else {
                 WtCard(Modifier.fillMaxWidth()) {
                     Text("Wardrive", style = MaterialTheme.typography.titleMedium, color = c.text)
@@ -93,7 +95,7 @@ fun DrivesScreen(
 }
 
 @Composable
-private fun ActiveDrive(status: WardriveStatus, onStop: () -> Unit) {
+private fun ActiveDrive(status: WardriveStatus, liveStream: LiveState?, onStop: () -> Unit) {
     val c = Wt.colors
     val shape = RoundedCornerShape(12.dp)
     val clock = rememberClock(1_000)
@@ -115,8 +117,30 @@ private fun ActiveDrive(status: WardriveStatus, onStop: () -> Unit) {
         Spacer(Modifier.height(6.dp))
         Text(status.name, style = MaterialTheme.typography.titleMedium, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Hint("${status.wifiDevices} Wi-Fi · ${status.bluetoothDevices} Bluetooth · ${status.observations} sightings · ${status.geotagged} geotagged")
+        if (liveStream != null) {
+            Spacer(Modifier.height(8.dp))
+            LiveStreamRow(liveStream)
+        }
         Spacer(Modifier.height(12.dp))
         WtButton("Stop and save", onStop, Modifier.fillMaxWidth(), kind = BtnKind.Danger, icon = Icons.Outlined.Stop)
+    }
+}
+
+/** A small status line under the recording card while a wardrive streams to NetSeer. */
+@Composable
+private fun LiveStreamRow(state: LiveState) {
+    val c = Wt.colors
+    val (dot, label) = when (state) {
+        LiveState.Live -> c.good to "Streaming live to NetSeer"
+        LiveState.Connecting -> c.fair to "Connecting to NetSeer…"
+        LiveState.Reconnecting -> c.fair to "Reconnecting to NetSeer…"
+        LiveState.Error -> c.weak to "Live streaming lost — the drive is still recording"
+        LiveState.Idle, LiveState.Closed -> c.muted to "Live streaming stopped"
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
+        Spacer(Modifier.width(8.dp))
+        Text(label, style = MaterialTheme.typography.bodySmall, color = c.muted)
     }
 }
 

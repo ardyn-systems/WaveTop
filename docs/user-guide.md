@@ -88,7 +88,8 @@ heard there. Pick the band at the top. Crowded channels are the ones to avoid fo
 
 A **wardrive** records every sighting with its time and GPS position.
 
-1. Tap **Start a wardrive** (or **Drive** in the top bar) and give it a name.
+1. Tap **Start a wardrive** (or **Drive** in the top bar) and give it a name. If you've paired with
+   NetSeer, you can also turn on **Stream live to NetSeer** here (see below).
 2. Walk or drive. WaveTop keeps recording with the screen off and shows a notification with the time
    and counts, with **Stop & save**. (Some phones pause Bluetooth LE scanning while the screen is off;
    Settings → General can keep the screen on while driving.)
@@ -96,6 +97,16 @@ A **wardrive** records every sighting with its time and GPS position.
 
 If a drive ends without being stopped (the phone died), it's still saved up to its last sighting and
 marked **Interrupted**.
+
+<img src="images/drive-streaming.png" alt="A drive streaming live to NetSeer" width="300" />
+
+**Stream live to NetSeer.** With the switch on when you start a drive, WaveTop opens a live session on
+your paired NetSeer and sends each Wi-Fi access point as it's heard, so NetSeer's map fills in while you
+move. The recording card shows a green **Streaming live to NetSeer** line; if the connection drops it
+reconnects on its own and the drive keeps recording regardless. Live streaming covers Wi-Fi; the saved
+drive still holds Bluetooth, so you can send the whole thing with the NetSeer button afterwards. Over
+the internet, point WaveTop at NetSeer's address on a private network such as Tailscale — the stream
+rides the same encrypted link as everything else.
 
 <img src="images/drive-detail.png" alt="A saved drive" width="300" /> <img src="images/drive-map.png" alt="A drive on the map" width="300" />
 
