@@ -23,7 +23,7 @@ APIs: no root, no monitor mode, no Google Play services. Nothing leaves your pho
 - **Devices** — every nearby access point and Bluetooth device, live: signal with a history
   sparkline, channel, security (open networks in red), vendor from the IEEE OUI registry. Filter by
   Wi-Fi or Bluetooth and sort by signal, name, security, channel, or last seen.
-- **Map** — a street map with each device pinned where its signal peaked, a legend, zoom controls,
+- **Map** — a street map with each device pinned at a signal-weighted estimate of where it is, a legend, zoom controls,
   and a card for whatever you tap (a cluster opens a list to pick from). Or the **radar**: distance
   from the centre is signal strength.
 - **Channels** — access points per channel on 2.4, 5 and 6 GHz, to spot crowded channels.

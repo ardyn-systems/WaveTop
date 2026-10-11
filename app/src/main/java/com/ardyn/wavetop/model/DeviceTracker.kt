@@ -49,6 +49,37 @@ class DeviceTracker(
     private val maxFixSkewMs: Long = 15_000L,
 ) {
     private val devices = LinkedHashMap<String, TrackedDevice>()
+    private val pins = HashMap<String, PinEstimate>()
+
+    /**
+     * Accumulates a device's location as a signal-weighted centroid of every usable fix. Each fix is
+     * weighted by linear signal power (`10^(rssi/10)`), so sightings taken where the signal was strong
+     * (i.e. near the device) dominate, while weaker, farther sightings only nudge the result. That
+     * smooths GPS jitter and pulls the pin toward the device, rather than trusting one loudest sample.
+     */
+    private class PinEstimate {
+        private var sumW = 0.0
+        private var sumWLat = 0.0
+        private var sumWLon = 0.0
+        private var strongest = Int.MIN_VALUE
+        private var accuracyM = 0f
+        private var timeMs = 0L
+
+        fun add(fix: GeoFix, rssi: Int) {
+            val w = Math.pow(10.0, rssi / 10.0)
+            sumW += w
+            sumWLat += w * fix.lat
+            sumWLon += w * fix.lon
+            if (rssi >= strongest) {
+                strongest = rssi
+                accuracyM = fix.accuracyM
+                timeMs = fix.timeMs
+            }
+        }
+
+        /** The estimated fix: the weighted centre, carrying the strongest sighting's accuracy and time. */
+        fun fix(): GeoFix? = if (sumW > 0) GeoFix(sumWLat / sumW, sumWLon / sumW, accuracyM, timeMs) else null
+    }
 
     fun devices(): List<TrackedDevice> = devices.values.toList()
 
@@ -100,6 +131,7 @@ class DeviceTracker(
     /** Drops devices not seen for [expireAfterMs] — BLE addresses rotate, so the table would only grow. */
     fun expire(nowMs: Long) {
         devices.values.removeAll { nowMs - it.lastSeenMs > expireAfterMs }
+        pins.keys.retainAll(devices.keys)
     }
 
     private fun usable(fix: GeoFix, seenMs: Long): Boolean =
@@ -138,7 +170,13 @@ class DeviceTracker(
         } else {
             old?.history ?: emptyList()
         }
-        val loudest = sample != null && (old?.maxRssi == null || sample >= old.maxRssi)
+        // Estimate position as a signal-weighted centroid of every usable fix, so the pin lands near
+        // the real device instead of wherever the single loudest sample happened to be taken.
+        val estimator = if (obs.fix != null && sample != null) {
+            pins.getOrPut(key) { PinEstimate() }.apply { add(obs.fix, sample) }
+        } else {
+            pins[key]
+        }
         devices[key] = TrackedDevice(
             key = key,
             phy = obs.phy,
@@ -156,8 +194,7 @@ class DeviceTracker(
             maxRssi = listOfNotNull(old?.maxRssi, sample).maxOrNull(),
             firstSeenMs = old?.firstSeenMs ?: obs.timeMs,
             lastSeenMs = obs.timeMs,
-            // Pin on the first usable fix, then move the pin whenever the signal peaks.
-            bestFix = if (obs.fix != null && (loudest || old?.bestFix == null)) obs.fix else old?.bestFix,
+            bestFix = estimator?.fix() ?: old?.bestFix,
             sections = sections,
         )
         return if (old == null) Merge.New else Merge.Updated

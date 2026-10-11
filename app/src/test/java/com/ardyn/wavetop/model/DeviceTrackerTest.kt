@@ -56,12 +56,21 @@ class DeviceTrackerTest {
     }
 
     @Test
-    fun `pin moves only when the signal peaks`() {
+    fun `the pin is a signal-weighted centroid dominated by the strongest sightings`() {
         val t = DeviceTracker()
         t.updateWifi(listOf(ap(-70, 1_000)), fix(1.0, 1_000))
-        t.updateWifi(listOf(ap(-50, 2_000)), fix(2.0, 2_000))
+        t.updateWifi(listOf(ap(-50, 2_000)), fix(2.0, 2_000)) // 100x the power of -70
         t.updateWifi(listOf(ap(-80, 3_000)), fix(3.0, 3_000))
-        assertEquals(2.0, t.devices().single().bestFix!!.lat, 0.0)
+        // The strong -50 sighting at lat 2 dominates; the far weaker ones barely nudge the pin.
+        assertEquals(2.0, t.devices().single().bestFix!!.lat, 0.05)
+    }
+
+    @Test
+    fun `two equal-strength sightings pin at their midpoint`() {
+        val t = DeviceTracker()
+        t.updateWifi(listOf(ap(-60, 1_000)), fix(0.0, 1_000))
+        t.updateWifi(listOf(ap(-60, 2_000)), fix(2.0, 2_000))
+        assertEquals(1.0, t.devices().single().bestFix!!.lat, 1e-9)
     }
 
     @Test
@@ -123,7 +132,7 @@ class DeviceTrackerTest {
         recorded.forEach(replayed::replay)
         val d = replayed.devices().single()
         assertEquals(listOf(-70, -45), d.history)
-        assertEquals(2.0, d.bestFix!!.lat, 0.0)
+        assertEquals(2.0, d.bestFix!!.lat, 0.05)
         assertEquals("[WPA2-PSK-CCMP][ESS]", d.capabilities)
         assertTrue(d.sections.isNotEmpty())
     }

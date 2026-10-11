@@ -126,7 +126,7 @@ fun DeviceSheet(
             Fact("Last", "${timeText(device.lastSeenMs, settings.clock)} (${agoText(nowMs - device.lastSeenMs)})")
             device.bestFix?.let { f ->
                 Fact(
-                    "Strongest at",
+                    "Estimated at",
                     String.format(Locale.US, "%.5f, %.5f  ±%d m", f.lat, f.lon, f.accuracyM.toInt()),
                     mono = true,
                 )
