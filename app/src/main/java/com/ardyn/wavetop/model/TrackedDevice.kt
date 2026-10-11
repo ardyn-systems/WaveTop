@@ -6,7 +6,8 @@ enum class Phy { Wifi, Bluetooth }
  * A location fix. [accuracyM] is the platform's 68% radius; [timeMs] is when the fix was
  * taken (epoch ms), which is what decides whether it can tag a sighting.
  */
-data class GeoFix(val lat: Double, val lon: Double, val accuracyM: Float, val timeMs: Long)
+/** [bearing] is the course over ground in degrees (0 = north, clockwise), null when not moving/unknown. */
+data class GeoFix(val lat: Double, val lon: Double, val accuracyM: Float, val timeMs: Long, val bearing: Float? = null)
 
 /**
  * One device as Kismet tracks it: the latest scan record plus what has been

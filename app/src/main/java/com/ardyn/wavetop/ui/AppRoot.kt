@@ -224,6 +224,7 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
                                     onFilter = vm::setFilter,
                                     onMode = vm::setMapMode,
                                     onBasemap = vm::setBasemap,
+                                    onHeadingUp = { on -> vm.updateSettings { it.copy(mapHeadingUp = on) } },
                                     onSelect = vm::select,
                                 )
                                 Tab.Channels -> ChannelsScreen(engine.devices, view.band, vm::setBand)
@@ -251,6 +252,7 @@ fun AppRoot(vm: AppViewModel = viewModel()) {
                                             onSort = vm::sortBy,
                                             onSelect = vm::select,
                                             onBasemap = vm::setBasemap,
+                                            onHeadingUp = { on -> vm.updateSettings { it.copy(mapHeadingUp = on) } },
                                             onTime = vm::setSurveyTime,
                                             onSend = {
                                                 vm.resetNetSeerTask()

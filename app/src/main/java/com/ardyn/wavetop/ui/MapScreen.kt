@@ -45,6 +45,7 @@ fun MapScreen(
     onFilter: (PhyFilter) -> Unit,
     onMode: (MapMode) -> Unit,
     onBasemap: (Basemap) -> Unit,
+    onHeadingUp: (Boolean) -> Unit,
     onSelect: (String) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
@@ -64,6 +65,8 @@ fun MapScreen(
                     nowMs = nowMs,
                     basemap = view.basemap,
                     showLabels = settings.mapLabels,
+                    headingUp = settings.mapHeadingUp,
+                    onHeadingUpChange = onHeadingUp,
                     onDetails = onSelect,
                     modifier = Modifier.fillMaxSize(),
                 )
