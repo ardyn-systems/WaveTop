@@ -160,6 +160,30 @@ Then open any survey and tap the NetSeer button → **Send**. NetSeer reads it a
 own, with each device placed from its GPS sightings. **Unpair** forgets NetSeer on the phone; remove the
 phone in NetSeer's Integrations to revoke it there too.
 
+### Over the internet (Tailscale)
+
+On the same Wi-Fi, or plugged in over USB, you don't need any of this. To reach NetSeer from
+**anywhere** — your phone on cellular, NetSeer on your home PC — put both devices on the same private
+network with [Tailscale](https://tailscale.com). It's free for personal use, and once it's set up WaveTop
+reaches NetSeer exactly like it's on your Wi-Fi. WaveTop and NetSeer don't bundle Tailscale; you install
+it once on each device.
+
+1. **Install Tailscale on the computer running NetSeer.** Download it from
+   [tailscale.com/download](https://tailscale.com/download) and sign in (Google, GitHub, Microsoft, or
+   email) — that creates your private network. The computer now has a Tailscale address like
+   `100.101.102.103`.
+2. **Install Tailscale on the phone** from the Play Store, sign in with the **same account**, allow the
+   VPN when Android asks, and turn it on. The phone joins the same network with its own `100.x` address.
+   The two can now reach each other from anywhere, with no port-forwarding.
+3. **In NetSeer, turn on Settings → Integrations → Allow devices on my network**, then restart NetSeer
+   (it needs to listen on the Tailscale connection). Allow it if your firewall asks.
+4. **Pair.** In NetSeer, **Settings → Integrations → Pair a device** shows the QR — now carrying the
+   `100.x` address. In WaveTop, **Settings → NetSeer → Scan QR code** and point at it. WaveTop connects
+   over Tailscale and pairs. (Scan the QR rather than typing a Tailscale name by hand.)
+
+After that, whenever **Tailscale is on** on both devices and **NetSeer is running**, sending a survey or
+streaming one live works from anywhere — the computer just has to be awake.
+
 ## Log
 
 Everything WaveTop noticed, newest first: new devices, Wi-Fi or Bluetooth switching off, Android
