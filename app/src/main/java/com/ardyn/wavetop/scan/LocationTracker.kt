@@ -80,10 +80,15 @@ class LocationTracker(context: Context) {
         (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) / 1_000_000
 
     private fun Location.toFix(): GeoFix =
-        GeoFix(latitude, longitude, accuracy, System.currentTimeMillis() - ageMs(this))
+        GeoFix(
+            latitude, longitude, accuracy, System.currentTimeMillis() - ageMs(this),
+            // Course over ground, but only while actually moving — a stationary GPS bearing is noise.
+            bearing = if (hasBearing() && (!hasSpeed() || speed >= MIN_SPEED_MS)) bearing else null,
+        )
 
     private companion object {
         const val UPDATE_MS = 2_000L
         const val FRESH_MS = 10_000L
+        const val MIN_SPEED_MS = 0.7f // ~2.5 km/h; below this the heading isn't trustworthy.
     }
 }

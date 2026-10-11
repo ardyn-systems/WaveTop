@@ -29,6 +29,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FitScreen
+import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.material.icons.outlined.Navigation
 import androidx.compose.material.icons.outlined.MyLocation
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.Icon
@@ -94,6 +96,8 @@ fun GeoMap(
     nowMs: Long,
     basemap: Basemap,
     showLabels: Boolean,
+    headingUp: Boolean,
+    onHeadingUpChange: (Boolean) -> Unit,
     onDetails: (String) -> Unit,
     modifier: Modifier = Modifier,
     /** Live survey: shows you. Saved survey: shows [track] (up to [timeMs]) instead. */
@@ -140,11 +144,27 @@ fun GeoMap(
     val highlighted = pinned.firstOrNull { it.key == highlightKey }
     val operator = if (live) fix else shownTrack.lastOrNull().takeIf { timeMs != null }
 
+    // The course to orient "up": the live fix's bearing, or the last leg of a saved route.
+    val heading: Float? = when {
+        live -> fix?.bearing
+        shownTrack.size >= 2 -> bearingBetween(shownTrack[shownTrack.size - 2], shownTrack.last())
+        else -> null
+    }
+
     val initialCenter = highlighted?.bestFix ?: fix ?: track.lastOrNull() ?: pinned.firstOrNull()?.bestFix
     LaunchedEffect(initialCenter != null) {
         if (initialCenter != null && !centered) {
             mapView.controller.setCenter(GeoPoint(initialCenter.lat, initialCenter.lon))
             centered = true
+        }
+    }
+    // Heading-up: follow the operator and turn the map so travel points up. North-up: level it.
+    LaunchedEffect(headingUp, operator?.lat, operator?.lon, heading) {
+        if (headingUp) {
+            operator?.let { mapView.controller.animateTo(GeoPoint(it.lat, it.lon)) }
+            heading?.let { mapView.setMapOrientation(-it) }
+        } else if (mapView.mapOrientation != 0f) {
+            mapView.setMapOrientation(0f)
         }
     }
     LaunchedEffect(focusNonce) {
@@ -201,6 +221,12 @@ fun GeoMap(
         ) {
             MapButton(Icons.Outlined.Add, "Zoom in") { mapView.controller.zoomIn() }
             MapButton(Icons.Outlined.Remove, "Zoom out") { mapView.controller.zoomOut() }
+            if (live || shownTrack.size >= 2) {
+                MapButton(
+                    if (headingUp) Icons.Outlined.Navigation else Icons.Outlined.Explore,
+                    if (headingUp) "North up" else "Heading up",
+                ) { onHeadingUpChange(!headingUp) }
+            }
             if (live && fix != null) {
                 MapButton(Icons.Outlined.MyLocation, "Centre on me") { mapView.controller.animateTo(GeoPoint(fix.lat, fix.lon)) }
             }
@@ -402,6 +428,16 @@ private fun boundsOf(points: List<GeoPoint>): BoundingBox {
     } else {
         b
     }
+}
+
+/** Initial great-circle bearing from [a] to [b], in degrees clockwise from north (0..360). */
+private fun bearingBetween(a: GeoFix, b: GeoFix): Float {
+    val lat1 = Math.toRadians(a.lat)
+    val lat2 = Math.toRadians(b.lat)
+    val dLon = Math.toRadians(b.lon - a.lon)
+    val y = Math.sin(dLon) * Math.cos(lat2)
+    val x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon)
+    return ((Math.toDegrees(Math.atan2(y, x)) + 360.0) % 360.0).toFloat()
 }
 
 /** Recolours street tiles to sit under each theme (NetSeer tints its tiles the same way). */

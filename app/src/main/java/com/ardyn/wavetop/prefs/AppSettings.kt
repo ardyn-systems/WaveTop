@@ -24,6 +24,8 @@ data class Settings(
     val clock: ClockStyle = ClockStyle.Auto,
     /** Draw device names beside the strongest pins on the maps. */
     val mapLabels: Boolean = true,
+    /** Geo map orientation: true keeps the direction of travel pointing up, false keeps north up. */
+    val mapHeadingUp: Boolean = false,
     /** Keep the screen awake while a survey is recording and WaveTop is open. */
     val keepScreenOnWhileDriving: Boolean = true,
     /** Start scanning as soon as WaveTop opens. */
@@ -67,6 +69,7 @@ class AppSettings private constructor(context: Context) {
             theme = AppTheme.fromId(prefs.getString(K_THEME, null)),
             clock = ClockStyle.entries.firstOrNull { it.id == prefs.getString(K_CLOCK, null) } ?: ClockStyle.Auto,
             mapLabels = prefs.getBoolean(K_MAP_LABELS, true),
+            mapHeadingUp = prefs.getBoolean(K_MAP_HEADING_UP, false),
             keepScreenOnWhileDriving = prefs.getBoolean(K_SCREEN_ON, true),
             liveOnOpen = prefs.getBoolean(K_LIVE_ON_OPEN, true),
             autoCheckUpdates = prefs.getBoolean(K_AUTO_UPDATE, true),
@@ -83,6 +86,7 @@ class AppSettings private constructor(context: Context) {
             putString(K_THEME, s.theme.id)
             putString(K_CLOCK, s.clock.id)
             putBoolean(K_MAP_LABELS, s.mapLabels)
+            putBoolean(K_MAP_HEADING_UP, s.mapHeadingUp)
             putBoolean(K_SCREEN_ON, s.keepScreenOnWhileDriving)
             putBoolean(K_LIVE_ON_OPEN, s.liveOnOpen)
             putBoolean(K_AUTO_UPDATE, s.autoCheckUpdates)
@@ -112,6 +116,7 @@ class AppSettings private constructor(context: Context) {
         private const val K_THEME = "theme"
         private const val K_CLOCK = "clock"
         private const val K_MAP_LABELS = "map_labels"
+        private const val K_MAP_HEADING_UP = "map_heading_up"
         private const val K_SCREEN_ON = "screen_on_driving"
         private const val K_LIVE_ON_OPEN = "live_on_open"
         private const val K_AUTO_UPDATE = "auto_update_check"

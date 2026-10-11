@@ -63,7 +63,10 @@ that's roughly where it is. You're the orange-red diamond, with a faint circle f
 
 - The **legend** (top left) names the colours: access points, Bluetooth, open networks (red ring), you,
   and the selected device.
-- **+ / −**, **centre on me** and **fit everything** are bottom right.
+- **+ / −**, the **orientation** toggle, **centre on me** and **fit everything** are bottom right.
+- **Orientation** switches between **north up** (the default) and **heading up**: in heading-up the map
+  follows you and turns so your direction of travel points up, like car navigation. The choice is
+  remembered. (It needs you to be moving for a heading; standing still it keeps north up.)
 - **Tap a pin** for a card with its channel, security, signal and vendor; **Details** opens the full
   sheet. If several pins sit under your finger, a list opens instead so you can pick the right one —
   or **Zoom in** to pull them apart.
