@@ -88,6 +88,8 @@ network like Tailscale. Or choose how to reach it and type the six-digit code by
   (add `-s <serial>` after `adb.exe` if more than one device is connected). NetSeer stays private to that computer.
 - **Wi-Fi / network** — turn on **Allow devices on my network** in NetSeer's Integrations and type the
   address it shows.
+- **Over the internet** — put both devices on [Tailscale](https://tailscale.com) (free, no port-forwarding)
+  and it works like Wi-Fi from anywhere. See [the user guide](docs/user-guide.md#over-the-internet-tailscale).
 
 Then open any survey and tap the NetSeer button. NetSeer opens the map by itself.
 
