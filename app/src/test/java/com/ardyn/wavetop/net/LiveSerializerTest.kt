@@ -96,6 +96,34 @@ class LiveSerializerTest {
     }
 
     @Test
+    fun `batch wraps one delta per wifi sighting, time-ordered, bluetooth skipped`() {
+        val bt = Observation(
+            timeMs = 500L, phy = Phy.Bluetooth, mac = "11:22:33:44:55:66", name = "Buds",
+            type = "BLE", crypto = "", capabilities = "", channel = null, frequencyMhz = null,
+            manufacturer = "Acme", rssi = -70, fix = null,
+        )
+        val later = wifi(mac = "AA:AA:AA:AA:AA:AA").copy(timeMs = 2_000L, fix = GeoFix(2.0, 2.0, 5f, 2_000L))
+        val earlier = wifi(mac = "BB:BB:BB:BB:BB:BB").copy(timeMs = 1_000L, fix = GeoFix(1.0, 1.0, 5f, 1_000L))
+        val json = JSONObject(LiveSerializer.batch(listOf(bt, later, earlier))!!)
+        val obs = json.getJSONArray("observations")
+        assertEquals(2, obs.length()) // Bluetooth dropped, two Wi-Fi kept
+        // Time-ordered: the earlier sighting comes first, each delta carries its own position.
+        assertEquals("BB:BB:BB:BB:BB:BB", obs.getJSONObject(0).getJSONArray("devices").getJSONObject(0).getString("mac"))
+        assertEquals(1.0, obs.getJSONObject(0).getJSONObject("position").getDouble("lat"), 1e-9)
+        assertEquals(2.0, obs.getJSONObject(1).getJSONObject("position").getDouble("lat"), 1e-9)
+    }
+
+    @Test
+    fun `batch of only bluetooth yields null`() {
+        val bt = Observation(
+            timeMs = 1L, phy = Phy.Bluetooth, mac = "11:22:33:44:55:66", name = "Buds",
+            type = "BLE", crypto = "", capabilities = "", channel = null, frequencyMhz = null,
+            manufacturer = "Acme", rssi = -70, fix = GeoFix(1.0, 1.0, 5f, 1L),
+        )
+        assertNull(LiveSerializer.batch(listOf(bt)))
+    }
+
+    @Test
     fun `missing optional fields are omitted, not sent as null`() {
         val sparse = wifi(name = "", channel = null, freq = null, rssi = null, vendor = "")
         val dev = JSONObject(LiveSerializer.message(listOf(sparse), null)!!).getJSONArray("devices").getJSONObject(0)

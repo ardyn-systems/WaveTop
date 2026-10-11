@@ -98,6 +98,37 @@ object NetSeerClient {
             "NetSeer is reading \"${json.optString("name", name)}\"; the map opens there by itself."
         }
 
+    /** Raised when NetSeer doesn't have a given endpoint (older version), so the caller can fall back. */
+    object EndpointMissing : IOException("That NetSeer doesn't have this endpoint yet.")
+
+    /**
+     * Pushes a finished survey as a batch of observation deltas (NetSeer rebuilds the device graph and
+     * the operator route). Fails with [EndpointMissing] on a 404 so the caller can fall back to a capture.
+     */
+    suspend fun pushObservations(link: NetSeerLink, body: String, name: String): Result<String> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val json = JSONObject(
+                    request(
+                        "${link.baseUrl}/api/v1/ingest/observations",
+                        "POST",
+                        body = body.toByteArray(),
+                        contentType = "application/json",
+                        headers = mapOf(
+                            "Authorization" to "Bearer ${link.token}",
+                            "X-NetSeer-API" to "1",
+                            "X-NetSeer-Source" to "WaveTop",
+                            "X-NetSeer-Name" to name,
+                        ),
+                    ),
+                )
+                "NetSeer is building \"${json.optString("name", name)}\"; the map opens there by itself."
+            }.recoverCatching { e ->
+                if (e is HttpError && e.code == 404) throw EndpointMissing
+                throw IOException(describe(e, link.baseUrl))
+            }
+        }
+
     private suspend fun <T> call(baseUrl: String, block: () -> T): Result<T> = withContext(Dispatchers.IO) {
         runCatching(block).recoverCatching { throw IOException(describe(it, baseUrl)) }
     }
