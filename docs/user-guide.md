@@ -47,7 +47,7 @@ for a minute fade; ones not heard for ten minutes drop off the list.
 
 Tap any device. The sheet shows its signal now, its weakest and strongest, a graph of recent
 readings, its identity, security, channel and frequency, vendor, and when it was first and last
-heard — plus where it was heard loudest, if the phone had an accurate GPS fix then.
+heard — plus its estimated location, if the phone had accurate GPS fixes while it was in range.
 
 **Show on map** jumps to the street map and rings the device; if it has no position yet, **Show on
 radar** does the same on the radar.
@@ -56,7 +56,9 @@ radar** does the same on the radar.
 
 <img src="images/map-street.png" alt="Street map" width="300" /> <img src="images/map-popup.png" alt="A tapped pin" width="300" />
 
-**Street** pins every device where its signal was strongest — after you've walked or driven past it,
+**Street** pins every device at a signal-weighted estimate of where it is — each pin is the centre of
+the fixes where that device was heard, weighted by how strong it was, so stronger (nearer) sightings
+pull the pin toward the device. After you've walked or driven past it,
 that's roughly where it is. You're the orange-red diamond, with a faint circle for GPS accuracy.
 
 - The **legend** (top left) names the colours: access points, Bluetooth, open networks (red ring), you,
