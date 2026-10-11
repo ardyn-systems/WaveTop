@@ -162,8 +162,9 @@ Pair once (**Settings → NetSeer**):
    tap **Pair**.
 
 Then open any survey and tap the NetSeer button → **Send**. NetSeer reads it and opens the map on its
-own, with each device placed from its GPS sightings. **Unpair** forgets NetSeer on the phone; remove the
-phone in NetSeer's Integrations to revoke it there too.
+own, with each device placed from its GPS sightings — and, on recent NetSeer, your **driven route**
+drawn from the survey too, the same as a live stream. **Unpair** forgets NetSeer on the phone; remove
+the phone in NetSeer's Integrations to revoke it there too.
 
 ### Over the internet (Tailscale)
 

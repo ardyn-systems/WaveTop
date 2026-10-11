@@ -61,7 +61,9 @@ object LiveSerializer {
     }
 
     /** One observation delta, or null when there's no Wi-Fi AP to report (position-only is a no-op). */
-    fun message(observations: List<Observation>, fix: GeoFix?): String? {
+    fun message(observations: List<Observation>, fix: GeoFix?): String? = delta(observations, fix)?.toString()
+
+    private fun delta(observations: List<Observation>, fix: GeoFix?): JSONObject? {
         val devices = JSONArray()
         val stamp = iso
         for (o in observations) {
@@ -85,7 +87,21 @@ object LiveSerializer {
             .put("ts", stamp.format(Date(System.currentTimeMillis())))
             .put("devices", devices)
         fix?.let { msg.put("position", JSONObject().put("lat", it.lat).put("lon", it.lon)) }
-        return msg.toString()
+        return msg
+    }
+
+    /**
+     * A whole finished survey as a batch of observation deltas (for `POST /api/v1/ingest/observations`),
+     * one delta per geotagged sighting so NetSeer rebuilds both the device graph and the operator route.
+     * Null when the survey has no Wi-Fi to send. Wi-Fi only for now (Bluetooth joins when the schema does).
+     */
+    fun batch(observations: List<Observation>): String? {
+        val deltas = JSONArray()
+        for (o in observations.sortedBy { it.timeMs }) {
+            delta(listOf(o), o.fix)?.let { deltas.put(it) }
+        }
+        if (deltas.length() == 0) return null
+        return JSONObject().put("observations", deltas).toString()
     }
 }
 

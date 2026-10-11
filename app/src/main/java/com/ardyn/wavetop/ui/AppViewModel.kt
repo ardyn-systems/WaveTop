@@ -17,6 +17,7 @@ import com.ardyn.wavetop.model.TrackedDevice
 import com.ardyn.wavetop.model.WifiBand
 import com.ardyn.wavetop.net.NetSeerAddress
 import com.ardyn.wavetop.net.NetSeerClient
+import com.ardyn.wavetop.net.LiveSerializer
 import com.ardyn.wavetop.net.QrPairing
 import com.ardyn.wavetop.prefs.AppSettings
 import com.ardyn.wavetop.prefs.NetSeerRoute
@@ -373,15 +374,28 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (survey.observations.none { it.fix != null }) {
             return setNetSeerTask(TaskStatus.Failed("Nothing in this survey has a GPS position, so there's nothing to map."))
         }
-        runNetSeer("Sending \"${open.entry.meta.name}\" to NetSeer…") {
+        val name = open.entry.meta.name
+        runNetSeer("Sending \"$name\" to NetSeer…") {
+            // Prefer observation deltas: NetSeer then rebuilds the driven route, not just the pins.
+            // Fall back to a WiGLE CSV on older NetSeer (no observations endpoint) — devices, no route.
+            val batch = LiveSerializer.batch(survey.observations)
+            if (batch != null) {
+                val result = NetSeerClient.pushObservations(link, batch, name)
+                if (result.exceptionOrNull() !== NetSeerClient.EndpointMissing) {
+                    result
+                        .onSuccess { setNetSeerTask(TaskStatus.Done(it)); engine.log("Sent \"$name\" to NetSeer") }
+                        .onFailure { setNetSeerTask(TaskStatus.Failed(it.message ?: "Send failed")) }
+                    return@runNetSeer
+                }
+            }
             val file = runCatching { engine.exportSurvey(open.entry, survey, ExportFormat.WigleCsv) }.getOrElse {
                 setNetSeerTask(TaskStatus.Failed("Couldn't build the export: ${it.message}"))
                 return@runNetSeer
             }
-            NetSeerClient.pushCapture(link, file, open.entry.meta.name, format = "csv")
+            NetSeerClient.pushCapture(link, file, name, format = "csv")
                 .onSuccess {
                     setNetSeerTask(TaskStatus.Done(it))
-                    engine.log("Sent \"${open.entry.meta.name}\" to NetSeer")
+                    engine.log("Sent \"$name\" to NetSeer")
                 }
                 .onFailure { setNetSeerTask(TaskStatus.Failed(it.message ?: "Send failed")) }
         }
